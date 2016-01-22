@@ -1,0 +1,31 @@
+{
+  "name": "sedpi",
+  "description": "sedpi web app",
+  "main": "sedpi",
+  "authors": [
+    "jysn_kun"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "sedpi"
+  ],
+  "moduleType": [],
+  "homepage": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "~3.3.6",
+    "react": "~0.14.6",
+    "moment": "~2.11.0",
+    "jquery-ui": "~1.11.4",
+    "moment-timezone": "~0.5.0",
+    "font-awesome": "fontawesome#~4.5.0",
+    "bootstrap-datepicker": "~1.5.1"
+  }
+}

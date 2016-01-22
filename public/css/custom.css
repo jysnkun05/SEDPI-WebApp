@@ -1,0 +1,156 @@
+h1 { font-size: 28px; }
+h2 { font-size: 22px; }
+h3 { font-size: 16px; }
+h4 { font-size: 14px; }
+h5 { font-size: 12px; }
+h6 { font-size: 10px; }
+
+hr { margin: 0.25rem auto; }
+
+.text-error {
+	color: #F53B3B;
+	font-size: 13px;
+	display: inline;
+	font-style: italic;
+	margin-left: 10px;
+}
+
+.table-title-col {
+	font-weight: bold;
+	text-align: right;
+	min-width: 120px;
+	width: 30%;
+}
+
+.navbar-brand {
+	padding: 12px 12px;
+}
+
+.light-gray-bg {
+	background-color: #F5F7FA;
+}
+
+.orange-bg {
+	color: #FF9800;	
+}
+
+.green-bg {
+	color: #4CAF50;
+}
+
+.blue-bg {
+	color: #337ab7;
+}
+
+.login-form {
+    margin-top: 10%;
+}
+
+.form-brand {
+	text-align: center;
+}
+
+.panel-custom-body {
+	padding: 10px;
+}
+
+.panel-custom-info {
+  border-color: #FFF;
+	background-color: #2196F3;
+	color: #FFF;
+}
+.panel-custom-info > .panel-heading {
+	color: #333;
+	background-color: #f5f5f5;
+	border-color: #ddd;
+}
+.panel-custom-info > .panel-heading + .panel-collapse > .panel-body {
+	border-top-color: #ddd;
+	padding: 10px;
+}
+.panel-custom-info > .panel-heading .badge {
+	color: #f5f5f5;
+	background-color: #333;
+}
+.panel-custom-info > .panel-footer + .panel-collapse > .panel-body {
+  border-bottom-color: #ddd;
+}
+
+.panel-custom-body {
+	padding: 10px;
+}
+
+.panel-custom-success {
+  border-color: #FFF;
+	background-color: #4CAF50;
+	color: #FFF;
+}
+.panel-custom-success > .panel-heading {
+  color: #333;
+  background-color: ;
+  border-color: #ddd;
+}
+.panel-custom-success > .panel-heading + .panel-collapse > .panel-body {
+  border-top-color: #ddd;
+  padding: 10px;
+}
+.panel-custom-success > .panel-heading .badge {
+  color: #f5f5f5;
+  background-color: #333;
+}
+.panel-custom-success > .panel-footer + .panel-collapse > .panel-body {
+  border-bottom-color: #ddd;
+}
+
+.panel-custom-error {
+  border-color: #FFF;
+	background-color: #F35C59;
+	color: #FFF;
+}
+.panel-custom-error > .panel-heading {
+  color: #333;
+  background-color: #f5f5f5;
+  border-color: #ddd;
+}
+.panel-custom-error > .panel-heading + .panel-collapse > .panel-body {
+  border-top-color: #ddd;
+  padding: 10px;
+}
+.panel-custom-error > .panel-heading .badge {
+  color: #f5f5f5;
+  background-color: #333;
+}
+.panel-custom-error > .panel-footer + .panel-collapse > .panel-body {
+  border-bottom-color: #ddd;
+}
+
+.gap {
+	margin-bottom: 10px;
+}
+
+.overflow-y {
+	overflow-y: auto;
+}
+
+.inline {
+	display: inline;
+}
+
+.nav-pills > li.done > a,
+.nav-pills > li.done > a:hover,
+.nav-pills > li.done > a:focus {
+  color: #fff;
+  background-color: #5CB85C;
+}
+
+.clickable-row {
+   cursor: pointer;
+}
+
+.textarea-disabled-resize {
+	resize: vertical;
+}
+
+.img-circle {
+    border-radius: 50%;
+}
