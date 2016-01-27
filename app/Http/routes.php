@@ -53,11 +53,16 @@ Route::group(['middleware' => ['web']], function () {
 			Route::post('getInvestorProfile', 'Modules\Investment\InvestController@getInvestorProfile');
 			Route::post('getInvestorInvestments', 'Modules\Investment\InvestController@getInvestorInvestments');
 			Route::post('sendEmailVerification', 'Modules\Investment\InvestController@sendEmailVerification');
+			Route::post('updateEmailAddress', 'Modules\Investment\InvestController@updateEmailAddress');
+			Route::post('updateUsername', 'Modules\Investment\InvestController@updateUsername');
+			Route::post('updatePassword', 'Modules\Investment\InvestController@updatePassword');
 		});
 
 		Route::group(['prefix' => 'api/transaction'], function () {
-			Route::post('deposit', 'Modules\Investment\TransactionController@deposit');
-			Route::post('withdraw', 'Modules\Investment\TransactionController@withdraw');
+			Route::post('getTransactionTypes', 'Modules\Investment\TransactionController@getTransactionTypes');
+			Route::post('getTransactionDetails', 'Modules\Investment\TransactionController@getTransactionDetails');
+			Route::post('saveTransaction', 'Modules\Investment\TransactionController@saveTransaction');
+			Route::post('updateTransaction', 'Modules\Investment\TransactionController@updateTransaction');
 		});
     });
 
@@ -72,16 +77,17 @@ Route::group(['middleware' => ['web']], function () {
     		Route::get('logout', 'Auth\AuthController@getLogout');
 	    	Route::get('/', ['uses' => 'Modules\Investors\InvestController@index', 'as' => 'investor_investment']);
 	    	Route::get('deposit', ['uses' => 'Modules\Investors\InvestController@showDeposit', 'as' => 'investor_deposit']);
+    	
+	    	Route::group(['prefix' => 'api/investors'], function () {
+	    		Route::post('getInvestorInvestments', 'Modules\Investors\InvestController@getInvestorInvestments');
+	    		Route::post('saveAdviceDeposit', 'Modules\Investors\InvestController@saveAdviceDeposit');
+	    	});
     	});
 
     	Route::get('verify/{verification_code}', ['uses' => 'Modules\Investment\InvestController@verifyInvestor', 'as' => 'member_verify']);
 
     	Route::group(['prefix' => 'api/verify'], function () {
     		Route::post('setUserCredentials', 'Modules\Investment\InvestController@setUserCredentials');
-    	});
-
-    	Route::group(['prefix' => 'api/investors'], function () {
-    		Route::post('getInvestorInvestments', 'Modules\Investors\InvestController@getInvestorInvestments');
     	});
     });
 });

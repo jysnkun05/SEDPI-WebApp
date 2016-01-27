@@ -10,6 +10,9 @@ use Mail;
 use Auth;
 
 use App\Http\Requests\Modules\Investment\SaveInvestorPostRequest;
+use App\Http\Requests\Modules\Investment\UpdateEmailAddressPostRequest;
+use App\Http\Requests\Modules\Investment\UpdateUsernamePostRequest;
+use App\Http\Requests\Modules\Investment\UpdatePasswordPostRequest;
 use App\Http\Requests\Modules\Application\ValidateUserCredentialsPostRequest;
 use App\Http\Controllers\Controller;
 
@@ -22,15 +25,15 @@ class InvestController extends Controller
 
     public function getInvestors()
     {
-    	$investors = Investor::all(['id', 'firstName', 'middleName', 'lastName', 'location', 'balance']);
+    	$investors = Investor::all(['id', 'firstName', 'middleName', 'lastName', 'country', 'balance']);
     	return $investors;
     }
 
     public function getInvestorProfile(Request $request)
     {
-        $investor = Investor::where('id', $request->input('id'))->first(['id', 'firstName', 'middleName', 'lastName', 'location', 'balance', 'member_since', 'user_id']);
-        $user= User::where('id', $investor->user_id)->first(['username', 'password', 'email', 'verification_code', 'is_verified', 'is_active']);
-        $user->has_password = $user->password !== null;
+        $investor = Investor::where('id', $request->input('id'))->first(['id', 'firstName', 'middleName', 'lastName', 'country', 'balance', 'member_since', 'user_id']);
+        $user= User::where('id', $investor->user_id)->first(['id','username', 'password', 'email', 'verification_code', 'is_verified', 'is_active']);
+        $user->has_password = $user->password != null;
         $user->verification_code = $user->verification_code === null;
 
     	return response()->json([
@@ -42,9 +45,13 @@ class InvestController extends Controller
     public function getInvestorInvestments(Request $request)
     {
         $transactions = Transaction::where('investor_id', $request->id)
-            ->orderBy('transaction_date', 'asc')
-            ->get(['id', 'transaction_date', 'transaction_type', 'amount', 'notes', 'runningBalance']);
-            
+            ->orderBy('transactionDate', 'asc')
+            ->get(['id', 'transactionDate', 'transaction_type_id', 'amount', 'notes', 'runningBalance']);
+
+        foreach($transactions as $key => $value)
+        {
+            $value->transaction_type_id = $value->transactionType->code;
+        }
         return $transactions;
     }
 
@@ -54,7 +61,7 @@ class InvestController extends Controller
     		'firstName' => $request->input('firstName'),
     		'middleName' => $request->input('middleName') === '' ? null : $request->input('middleName'),
     		'lastName' => $request->input('lastName'),
-            'location' => $request->input('location') === '' ? null : $request->input('location')
+            'country' => $request->input('country') === '' ? null : $request->input('country')
     	]);
   
     	$user = User::create([
@@ -77,6 +84,14 @@ class InvestController extends Controller
     {
         $investor = Investor::find($request->input('id'));
         $user = User::find($investor->user_id);
+        
+        if($user->is_verified)
+        {
+            return response()->json([
+                'status' => 'validated'
+            ]);
+        }
+
         if($user->verification_code === null)
         {
             $is_code_saved = false;
@@ -92,10 +107,11 @@ class InvestController extends Controller
         } 
 
         Mail::send('email.verify', ['investor' => $investor, 'user' => $user] ,function($message) use ($investor, $user) {
-            $message->from('jysndlsrys05@gmail.com', 'Jayson De los Reyes');
+            // $message->from('no-reply@sedpi.com', 'SEDPI');
+            $message->from('jynsdlsrys05@gmail.com', 'Jayson De los Reyes');
             $message->to($user->email, $investor->middleName === null ? 
                 sprintf("%s %s", $investor->firstName, $investor->lastName) : sprintf("%s %s %s", $investor->firstName, $investor->middleName ,$investor->lastName))
-                ->subject('Verify your email address'); 
+                ->subject('[SEDPI] Verify your email address'); 
         });
 
         return response()->json([
@@ -117,6 +133,56 @@ class InvestController extends Controller
         return response()->json([
             'status' => 'success',
             'url' => route('memberLogin') 
+        ]);
+    }
+
+    public function updateEmailAddress(UpdateEmailAddressPostRequest $request)
+    {
+        $user = User::find($request->input('id'));
+        
+        if($user->email === $request->input('email'))
+        {
+            return response()->json([
+                'status' => 'unchanged'
+            ]);
+        }
+
+        $user->email = $request->input('email');
+        $user->save();
+
+        return response()->json([
+            'status' => 'success'
+        ]);
+    }
+
+    public function updateUsername(UpdateUsernamePostRequest $request)
+    {
+        $user = User::find($request->input('id'));
+        
+        if($user->username === $request->input('username'))
+        {
+            return response()->json([
+                'status' => 'unchanged'
+            ]);
+        }
+
+        $user->username = $request->input('username');
+        $user->save();
+
+        return response()->json([
+            'status' => 'success'
+        ]);
+    }
+
+    public function updatePassword(UpdatePasswordPostRequest $request)
+    {
+        $user = User::find($request->input('id'));
+
+        $user->password = bcrypt($request->input('password'));
+        $user->save();
+
+        return response()->json([
+            'status' => 'success'
         ]);
     }
 }

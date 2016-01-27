@@ -16,13 +16,13 @@ var InvestTableView = React.createClass({
 		{
 			rows = investors.map(function (investor, index) {
 				investor.fullName = investor.middleName !== null ? investor.firstName + " " + investor.middleName + " " + investor.lastName : investor.firstName + " " + investor.lastName;
-				investor.location = investor.location !== null ? investor.location : 'Not Set';
+				investor.country = investor.country !== null ? investor.country : 'Not Set';
 				investor.member_since = moment.tz(investor.member_since, moment.tz.guess()).format('DD MMM YYYY');
 				investor.balance = accounting.formatMoney(investor.balance, "PhP ");
 				return 	<tr key={index} className="text-center clickable-row" onClick={this.props.investorSelect.bind(null, investor.id)}>
 							<td>{index + 1}</td>
 							<td>{investor.fullName}</td>
-							<td>{investor.location}</td>
+							<td>{investor.country}</td>
 							<td>{investor.member_since}</td>
 							<td>{investor.balance}</td>
 						</tr>;
@@ -79,7 +79,7 @@ var InvestAddView = React.createClass({
 			firstName: '',
 			middleName: '',
 			lastName: '',
-			location: '',
+			country: '',
 			email: '',
 			retries: 0,
 			countries: undefined
@@ -118,7 +118,7 @@ var InvestAddView = React.createClass({
 			firstName: this.state.firstName.trim(),
 			middleName: this.state.middleName.trim(),
 			lastName: this.state.lastName.trim(),
-			location: this.state.location,
+			country: this.state.country,
 			email: this.state.email.trim()
 		};
 
@@ -213,8 +213,8 @@ var InvestAddView = React.createClass({
 										</div>
 									</div>
 									<div className="form-group">
-										<label>Location *</label>
-										<select className="form-control" value={this.state.location} onChange={this.handleChange.bind(null, 'location')} disabled={this.state.countries === undefined}>
+										<label>Country</label>
+										<select className="form-control" value={this.state.country} onChange={this.handleChange.bind(null, 'country')} disabled={this.state.countries === undefined}>
 											{this.state.countries !== undefined ? 
 												<option value="" disabled={true}>Please select...</option> : null}
 											{ countryOptions }
@@ -259,12 +259,14 @@ var InvestDetailView = React.createClass({
 			detailView: 'PROFILE',
 			profileData: undefined,
 			investmentData: undefined,
-			retries: 0,
+			profileRetries: 0,
+			investmentRetries: 0,
+			retries: 0
 		};
 	},
 	componentWillMount: function () {
-		this.getInvestorProfile(this.props.selectedInvestorId, this.state.retries);
-		this.getInvestorInvestments(this.props.selectedInvestorId, this.state.retries);
+		this.getInvestorProfile(this.props.selectedInvestorId, this.state.profileRetries);
+		this.getInvestorInvestments(this.props.selectedInvestorId, this.state.investmentRetries);
 	},
 	sendEmailVerification: function (id) {
 		this.props.modalViewChange('EMAIL-SENDING');
@@ -277,7 +279,10 @@ var InvestDetailView = React.createClass({
 			data: {id : id},
 			dataType: 'json',
 			success: function (response) {
-				this.props.modalViewChange('EMAIL-SENT');
+				if(response.status === 'success')
+					this.props.modalViewChange('EMAIL-SENT');	
+				else if(response.status === 'validated')
+					this.props.modalViewChange('EMAIL-VALIDATED');
 				$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
 				$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
 				this.getInvestorProfile(this.props.selectedInvestorId, this.state.retries);
@@ -289,8 +294,8 @@ var InvestDetailView = React.createClass({
 			}.bind(this)
 		});
 	},
-	getInvestorProfile: function (id, retries) {
-		this.setState({retries: retries + 1});
+	getInvestorProfile: function (id, profileRetries) {
+		this.setState({profileRetries: profileRetries + 1});
 		$.ajax({
 			url: '/api/investment/getInvestorProfile',
 			type: 'POST',
@@ -300,17 +305,17 @@ var InvestDetailView = React.createClass({
 			success: function (profileData) {
 				this.setState({
 					profileData: profileData,
-					retries: 0
+					profileRetries: 0
 				});
 			}.bind(this),
 			error: function () {
-				if(retries <= 3)
-					this.getInvestorProfile(id ,retries);
+				if(profileRetries <= 3)
+					this.getInvestorProfile(id ,profileRetries);
 			}.bind(this)	
 		});
 	},
-	getInvestorInvestments: function (id, retries) {
-		this.setState({retries: retries + 1});
+	getInvestorInvestments: function (id, investmentRetries) {
+		this.setState({investmentRetries: investmentRetries + 1});
 		$.ajax({
 			url: '/api/investment/getInvestorInvestments',
 			type: 'POST',
@@ -320,14 +325,20 @@ var InvestDetailView = React.createClass({
 			success: function (investmentData) {
 				this.setState({
 					investmentData: investmentData,
-					retries: 0
+					investmentRetries: 0
 				});
 			}.bind(this),
 			error: function () {
-				if(retries <= 3)
-					this.getInvestorInvestments(id ,retries);
+				if(investmentRetries <= 3)
+					this.getInvestorInvestments(id ,investmentRetries);
 			}.bind(this)	
 		});
+	},
+	onProfileDataChange: function () {
+		this.getInvestorProfile(this.props.selectedInvestorId, this.state.profileRetries);
+	},
+	onInvestmentDataChange: function () {
+		this.getInvestorInvestments(this.props.selectedInvestorId, this.state.investmentRetries);
 	},
 	onDetailViewChange: function (detailViewKeyword) {
 		this.setState({detailView : detailViewKeyword});
@@ -338,13 +349,18 @@ var InvestDetailView = React.createClass({
 		{
 			view =	<InvestProfileDetails 
 						profileData={this.state.profileData}
+						profileDataChange={this.onProfileDataChange}
+						modalViewChange={this.props.modalViewChange}
 						mainViewChange={this.props.mainViewChange}
 						sendEmailVerification={this.sendEmailVerification}/>;
 		}
 		else if(this.state.detailView === 'INVESTMENT')
 		{
 			view =	<InvestInvestmentsDetails
+						selectedInvestorId={this.props.selectedInvestorId}
 						investmentData={this.state.investmentData}
+						investmentDataChange={this.onInvestmentDataChange}
+						modalViewChange={this.props.modalViewChange}
 						mainViewChange={this.props.mainViewChange}/>;
 		}
 		return (
@@ -387,6 +403,21 @@ var InvestDetailView = React.createClass({
 ==============================================*/
 
 var InvestInvestmentsDetails = React.createClass({
+	getInitialState: function () {
+		return {
+			investmentView: undefined,
+			selectedTransactionId: undefined
+		};
+	},
+	onInvestmentViewChange: function (investmentViewKeyword) {
+		this.setState({investmentView: investmentViewKeyword});
+	},
+	onTransactionSelect: function (id) {
+		this.setState({
+			selectedTransactionId: id,
+			investmentView: 'DETAILS'
+		});
+	},
 	render: function () {
 		var investmentView;
 		if(this.props.investmentData === undefined) 
@@ -405,9 +436,31 @@ var InvestInvestmentsDetails = React.createClass({
 		}
 		else
 		{
-			investmentView = 	<InvestAccountDetails 
-									investmentData={this.props.investmentData}
-									mainViewChange={this.props.mainViewChange}/>;
+			switch(this.state.investmentView) {
+				case 'TRANSACTION':
+					investmentView = 	<InvestTransactionForm
+											selectedInvestorId={this.props.selectedInvestorId}
+											investmentDataChange={this.props.investmentDataChange}
+											investmentViewChange={this.onInvestmentViewChange}
+											modalViewChange={this.props.modalViewChange}/>;
+					break;
+
+				case 'DETAILS':
+					investmentView =	<InvestTransactionDetails 
+											selectedTransactionId={this.state.selectedTransactionId}
+											modalViewChange={this.props.modalViewChange}
+											investmentDataChange={this.props.investmentDataChange}
+											investmentViewChange={this.onInvestmentViewChange}/>;
+					break;
+
+				default:
+					investmentView = 	<InvestAccountDetails 
+											investmentData={this.props.investmentData}
+											investmentViewChange={this.onInvestmentViewChange}
+											transactionSelect={this.onTransactionSelect}
+											mainViewChange={this.props.mainViewChange}/>;
+					break;
+			}
 		}
 		return (
 			<div className="panel panel-default">
@@ -439,14 +492,14 @@ var InvestAccountDetails = React.createClass({
 
 		if(this.props.investmentData.length > 0) {
 			SOA = this.props.investmentData.map(function (account, index) {
-				account.transaction_date = moment(account.transaction_date).format('DD MMM YYYY');
+				account.transactionDate = moment(account.transactionDate).format('DD MMM YYYY');
 				account.amount = accounting.formatNumber(account.amount, 2);
 				account.runningBalance = accounting.formatNumber(account.runningBalance, 2);
-				return 	<tr key={index}>
-							<td className="text-center">{account.transaction_date}</td>
-							<td className="text-right">{account.transaction_type === 'DP' ? account.amount : null}</td>
-							<td className="text-right">{account.transaction_type === 'WD' ? account.amount : null}</td>
-							<td className="text-right">{account.transaction_type === 'DV' ? account.amount : null}</td>
+				return 	<tr key={index} className="clickable-row" onClick={this.props.transactionSelect.bind(null, account.id)}>
+							<td className="text-center">{account.transactionDate}</td>
+							<td className="text-center">{account.transaction_type_id}</td>
+							<td className="text-right">{account.transaction_type.account_type === 'DR' ? account.amount : null}</td>
+							<td className="text-right">{account.transaction_type.account_type === 'CR' ? account.amount : null}</td>
 							<td className="text-right">{account.runningBalance}</td>
 						</tr>;
 			}.bind(this)); 
@@ -457,8 +510,7 @@ var InvestAccountDetails = React.createClass({
 					Statement of Account
 					<div className="pull-right">
 						<div className="btn-group">
-							<button type="button" className="btn btn-default btn-xs" onClick={this.props.mainViewChange.bind(null, 'DEPOSIT')}>Deposit</button>
-							<button type="button" className="btn btn-default btn-xs" onClick={this.props.mainViewChange.bind(null, 'WITHDRAW')}>Withdraw</button>
+							<button type="button" className="btn btn-link btn-xs" onClick={this.props.investmentViewChange.bind(null, 'TRANSACTION')}>Add New Transaction</button>
 						</div>
 					</div>
 				</div>
@@ -467,9 +519,9 @@ var InvestAccountDetails = React.createClass({
 						<thead>
 							<tr>
 								<th className="text-center">Date</th>
-								<th className="text-center">Deposit</th>
-								<th className="text-center">Withdraw</th>
-								<th className="text-center">Dividend</th>
+								<th className="text-center">TC</th>
+								<th className="text-center">Debit</th>
+								<th className="text-center">Credit</th>
 								<th className="text-center">Balance</th>
 							</tr>
 						</thead>
@@ -483,19 +535,436 @@ var InvestAccountDetails = React.createClass({
 	}
 });
 
-/*=====  End of Invest Account Details  ======*/
+/*----------  Invest Transaction Form  ----------*/
 
+var InvestTransactionForm = React.createClass({
+	getInitialState: function () {
+		return {
+			transactionTypes: undefined,
+			transactionDate: moment().format('MM/DD/YYYY'),
+			amount: '0.00',
+			transaction_type_id: '',
+			notes: ''
+		};
+	},
+	componentWillMount: function () {
+		this.getTransactionTypes();
+	},
+	componentDidMount: function () {
+		var self = this;
+		$("#datepicker-transactionDate").datepicker({
+			autoclose: true
+		}).on('changeDate', function(e){
+			self.setState({transactionDate: moment(e.date).format('MM/DD/YYYY')});
+		});
+	},
+	getTransactionTypes: function () {
+		$.ajax({
+			url: '/api/transaction/getTransactionTypes',
+			type: 'POST',
+			dataType: 'json',
+			cache: false,
+			success: function (types) {
+				this.setState({transactionTypes: types});
+			}.bind(this)
+		});
+	},
+	handleChange: function (name, e) {
+		var change = {};
+		change[name] = e.target.value;
+		this.setState(change);
+	},
+	handleSubmit: function (e) {
+		e.preventDefault();
+
+		this.props.modalViewChange('TRANSACTION-SAVING');
+		$("#InvestMessageContainerModal").modal();
+		$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = false;
+		$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = 'static';
+
+		var postData = {
+			id: this.props.selectedInvestorId,
+			transactionDate: this.state.transactionDate,
+			amount: accounting.unformat(this.state.amount),
+			transaction_type_id: this.state.transaction_type_id,
+			notes: this.state.notes
+		};
+
+		$.each(postData, function (key, value) {
+			$("#fg-" + key).removeClass('has-error');
+			$("#input-" + key).popover('destroy');
+		});
+
+		$.ajax({
+			url: 'api/transaction/saveTransaction',
+			type: 'POST',
+			data: postData,
+			success: function (response) {
+				this.props.modalViewChange('TRANSACTION-SUCCESS');
+				this.props.investmentDataChange();
+				this.props.investmentViewChange(undefined);
+				$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+				$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+
+			}.bind(this),
+			error: function (response) {
+				if(response.status === 422)
+				{
+					$("#InvestMessageContainerModal").modal('hide');	
+					$.each(response.responseJSON, function (key, value) {
+						$("#fg-" + key).addClass('has-error');
+						$("#input-" + key).popover({trigger: 'hover', content: value, placement: 'top'});
+					});	
+				}
+				else
+				{
+					this.props.modalViewChange('TRANSACTION-ERROR');
+					$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+					$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+				}
+			}.bind(this)
+		});
+	},
+	amountBlurred: function () {
+		this.setState({amount: accounting.formatNumber(this.state.amount, 2)});
+	},
+	amountFocused: function () {
+		this.setState({amount: accounting.unformat(this.state.amount)});
+	},
+	render: function () {
+		var transactionTypeOptions;
+		if(this.state.transactionTypes !== undefined)
+		{
+			transactionTypeOptions = this.state.transactionTypes.map (function (type, index) {
+				return <option key={index} value={type.id}>{type.description}</option>;
+			}.bind(this));
+		}
+		return (
+			<div className="panel panel-default">
+				<div className="panel-heading">
+					Add New Transaction
+				</div>
+				<div className="panel-body">
+					<div className="row">
+						<div className="col-md-6 col-md-offset-3">
+							<form onSubmit={this.handleSubmit}>
+								<div className="form-group" id="fg-transactionDate">
+									<label className="control-label" htmlFor="input-transactionDate">Transaction Date</label>
+									<div className="input-group date" id="datepicker-transactionDate">
+										<input
+											type="text"
+											className="form-control"
+											id="input-transactionDate"
+											value={this.state.transactionDate}
+											onChange={this.handleChange.bind(null, 'transactionDate')}/>
+										<span className="input-group-addon">
+											<span className="glyphicon glyphicon-calendar"></span>
+										</span>
+									</div>
+								</div>
+								<div className="form-group" id="fg-amount">
+									<label className="control-label" htmlFor="input-amount">Amount</label>
+									<div className="input-group">
+										<span className="input-group-addon">
+											<span>Php</span>
+										</span>
+										<input
+											type="text"
+											className="form-control text-right"
+											id="input-amount"
+											value={this.state.amount}
+											onFocus={this.amountFocused}
+											onBlur={this.amountBlurred}
+											onChange={this.handleChange.bind(null, 'amount')}/>
+									</div>
+								</div>
+								<div className="form-group"  id="fg-transaction_type_id">
+									<label className="control-label" htmlFor="input-transaction_type_id">Transaction Type</label>
+									<select
+										className="form-control"
+										id="input-transaction_type_id"
+										value={this.state.transaction_type_id}
+										disabled={this.state.transactionTypes === undefined}
+										onChange={this.handleChange.bind(null, 'transaction_type_id')}>
+											<option value="" disabled={true}>Please select...</option>
+											{ transactionTypeOptions }
+									</select>
+								</div>
+								<div className="form-group">
+									<label>Notes/Reason <small>(optional)</small></label>
+									<textarea 
+										className="form-control"
+										rows="5"
+										value={this.state.notes}
+										onChange={this.handleChange.bind(null, 'notes')}/>
+								</div>
+								<div className="form-group">
+									<div className="pull-right">
+										<div className="btn-group">
+											<button type="button" className="btn btn-default" onClick={this.props.investmentViewChange.bind(null, undefined)}>Cancel</button>
+											<button type="submit" className="btn btn-primary">Save Transaction</button>
+										</div>
+									</div>
+								</div>
+							</form>
+						</div>
+					</div>
+				</div>
+			</div>
+		);
+	}
+});
+
+/*----------  Invest View Transaction Details  ----------*/
+
+var InvestTransactionDetails = React.createClass({
+	getInitialState: function () {
+		return {
+			transactionTypes: undefined,
+			transactionDetails: undefined,
+			transactionDate: moment().format('MM/DD/YYYY'),
+			amount: '0.00',
+			transaction_type_id: '',
+			notes: '',
+			editMode: false 
+
+		};
+	},
+	componentWillMount: function () {
+		this.getTransactionDetails();
+		this.getTransactionTypes();
+	},
+	getTransactionDetails: function () {
+		$.ajax({
+			url: '/api/transaction/getTransactionDetails',
+			type: 'POST',
+			data: {id: this.props.selectedTransactionId},
+			dataType: 'json',
+			cache: false,
+			success: function (transaction) {
+				this.setState({
+					transactionDetails: transaction,
+					transactionDate: moment(transaction.transactionDate).format("MM/DD/YYYY"),
+					amount: accounting.formatNumber(transaction.amount, 2),
+					transaction_type_id: transaction.transaction_type_id,
+					notes: transaction.notes
+				});
+			}.bind(this)
+		});
+	},
+	getTransactionTypes: function () {
+		$.ajax({
+			url: '/api/transaction/getTransactionTypes',
+			type: 'POST',
+			dataType: 'json',
+			cache: false,
+			success: function (types) {
+				this.setState({transactionTypes: types});
+			}.bind(this)
+		});
+	},
+	handleChange: function (name, e) {
+		var change = {};
+		change[name] = e.target.value;
+		this.setState(change);
+
+		var transactionDetails = this.state.transactionDetails;
+
+		if(this.state.transactionDate == transactionDetails.transactionDate && 
+			this.state.amount == transactionDetails.amount && 
+			this.state.transaction_type_id == transactionDetails.transaction_type_id &&
+			this.state.notes == transactionDetails.notes)
+				this.setState({editMode: false});
+		else
+			this.setState({editMode: true});
+	},
+	handleSubmit: function (e) {
+		e.preventDefault();
+
+		this.props.modalViewChange('UPDATE-TRANSACTION-SAVING');
+		$("#InvestMessageContainerModal").modal();
+		$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = false;
+		$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = 'static';
+
+		var postData = {
+			id: this.props.selectedTransactionId,
+			transactionDate: this.state.transactionDate,
+			amount: accounting.unformat(this.state.amount),
+			transaction_type_id: this.state.transaction_type_id,
+			notes: this.state.notes
+		};
+
+		$.each(postData, function (key, value) {
+			$("#fg-" + key).removeClass('has-error');
+			$("#input-" + key).popover('destroy');
+		});
+
+		$.ajax({
+			url: 'api/transaction/updateTransaction',
+			type: 'POST',
+			data: postData,
+			success: function (response) {
+				this.props.modalViewChange('UPDATE-TRANSACTION-SUCCESS');
+				this.props.investmentDataChange();
+				this.props.investmentViewChange(undefined);
+				$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+				$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+
+			}.bind(this),
+			error: function (response) {
+				if(response.status === 422)
+				{
+					$("#InvestMessageContainerModal").modal('hide');	
+					$.each(response.responseJSON, function (key, value) {
+						$("#fg-" + key).addClass('has-error');
+						$("#input-" + key).popover({trigger: 'hover', content: value, placement: 'top'});
+					});	
+				}
+				else
+				{
+					this.props.modalViewChange('UPDATE-TRANSACTION-ERROR');
+					$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+					$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+				}
+			}.bind(this)
+		});
+	},
+	amountBlurred: function () {
+		this.setState({amount: accounting.formatNumber(this.state.amount, 2)});
+	},
+	amountFocused: function () {
+		this.setState({amount: accounting.unformat(this.state.amount)});
+	},
+	render: function () {
+		var transactionTypeOptions;
+		if(this.state.transactionTypes !== undefined)
+		{
+			transactionTypeOptions = this.state.transactionTypes.map (function (type, index) {
+				return <option key={index} value={type.id}>{type.description}</option>;
+			}.bind(this));
+		}
+		var view;
+		if(this.state.transactionDetails === undefined) {
+			view = 	<div className="panel panel-default">
+									<div className="panel-body">
+										<div className="row">
+											<div className="col-md-12">
+												<div className="text-center">
+													<i className="fa fa-circle-o-notch fa-spin fa-fw"></i> Loading Data...
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>; 	
+		}
+		else 
+		{
+			view = 	<div className="row">
+						<div className="col-md-6 col-md-offset-3">
+							<form onSubmit={this.handleSubmit}>
+								<div className="form-group" id="fg-transactionDate">
+									<label className="control-label" htmlFor="input-transactionDate">Transaction Date</label>
+									<div className="input-group date" id="datepicker-transactionDate">
+										<input
+											type="text"
+											className="form-control"
+											id="input-transactionDate"
+											value={this.state.transactionDate}
+											onChange={this.handleChange.bind(null, 'transactionDate')}/>
+										<span className="input-group-addon">
+											<span className="glyphicon glyphicon-calendar"></span>
+										</span>
+									</div>
+								</div>
+								<div className="form-group" id="fg-amount">
+									<label className="control-label" htmlFor="input-amount">Amount</label>
+									<div className="input-group">
+										<span className="input-group-addon">
+											<span>Php</span>
+										</span>
+										<input
+											type="text"
+											className="form-control text-right"
+											id="input-amount"
+											value={this.state.amount}
+											onFocus={this.amountFocused}
+											onBlur={this.amountBlurred}
+											onChange={this.handleChange.bind(null, 'amount')}/>
+									</div>
+								</div>
+								<div className="form-group"  id="fg-transaction_type_id">
+									<label className="control-label" htmlFor="input-transaction_type_id">Transaction Type</label>
+									<select
+										className="form-control"
+										id="input-transaction_type_id"
+										value={this.state.transaction_type_id}
+										disabled={this.state.transactionTypes === undefined}
+										onChange={this.handleChange.bind(null, 'transaction_type_id')}>
+											<option value="" disabled={true}>Please select...</option>
+											{ transactionTypeOptions }
+									</select>
+								</div>
+								<div className="form-group">
+									<label>Notes/Reason <small>(optional)</small></label>
+									<textarea 
+										className="form-control"
+										rows="5"
+										value={this.state.notes}
+										onChange={this.handleChange.bind(null, 'notes')}/>
+								</div>
+								<div className="form-group">
+									<div className="pull-right">
+										<div className="btn-group">
+											<button type="button" className="btn btn-default" onClick={this.props.investmentViewChange.bind(null, undefined)}>Cancel</button>
+											<button 
+												type="submit" 
+												className="btn btn-primary" 
+												disabled={!this.state.editMode}>
+													Update Transaction
+												</button>
+										</div>
+									</div>
+								</div>
+							</form>
+						</div>
+					</div>
+		}
+		return (
+			<div className="panel panel-default">
+				<div className="panel-heading">
+					Transaction Details
+					<div className="pull-right">
+						<button className="btn btn-link btn-xs">Edit Details</button>
+					</div>
+				</div>
+				<div className="panel-body">
+					{ view }
+				</div>
+			</div>
+		);
+	}
+});
+
+/*=====  End of Invest Account Details  ======*/
 
 /*==============================================
 =            Invest Profile Details            =
 ==============================================*/
 
 var InvestProfileDetails = React.createClass({
+	getInitialState: function () {
+		return {
+			profileView: undefined
+		};
+	},
+	onProfileViewChange: function (profileViewKeyword) {
+		this.setState({profileView: profileViewKeyword});
+	},
 	render: function () {
-		var profileView;
+		var view;
 		if(this.props.profileData === undefined) 
 		{
-			profileView = 	<div className="panel panel-default">
+			view = 	<div className="panel panel-default">
 								<div className="panel-body">
 									<div className="row">
 										<div className="col-md-12">
@@ -509,9 +978,22 @@ var InvestProfileDetails = React.createClass({
 		}
 		else
 		{
-			profileView = 	<ProfileUserCredentials 
+			switch(this.state.profileView) {
+				case 'PROFILE-MANAGE':
+					view = 	<ManageProfileUserCredentials
 								profileData={this.props.profileData}
+								profileDataChange={this.props.profileDataChange}
+								modalViewChange={this.props.modalViewChange}
+								profileViewChange={this.onProfileViewChange}/>;
+					break; 
+
+				default:
+					view = 	<ProfileUserCredentials 
+								profileData={this.props.profileData}
+								profileViewChange={this.onProfileViewChange}
 								sendEmailVerification={this.props.sendEmailVerification}/>;
+					break;
+			}
 		}
 		return(
 			<div className="panel panel-default">
@@ -524,7 +1006,7 @@ var InvestProfileDetails = React.createClass({
 					</div>
 					<div className="row">
 						<div className="col-md-12">
-							{ profileView }
+							{ view }
 						</div>
 					</div>
 				</div>
@@ -549,14 +1031,13 @@ var ProfileUserCredentials = React.createClass({
 		var user = this.props.profileData.user;
 		var investor = this.props.profileData.investor;
 		investor.fullName = investor.middleName !== null ? investor.firstName + " " + investor.middleName + " " + investor.lastName : investor.firstName + " " + investor.lastName;
-			
 		var sendEmailButton = user.is_verified ? null : <button type="button" className="btn btn-link btn-xs" onClick={this.props.sendEmailVerification.bind(null, investor.id)}>{user.verification_code ? "Send Email Verification" : "Resend Email Verification"}</button>;
-
 		return(
 			<div className="panel panel-default">
 				<div className="panel-heading">
 					User Credentials
 					<div className="pull-right">
+						<button type="button" className="btn btn-link btn-xs" onClick={this.props.profileViewChange.bind(null, 'PROFILE-MANAGE')}>Manage User Credentials</button>
 						{ sendEmailButton }
 					</div>
 				</div>
@@ -593,47 +1074,38 @@ var ProfileUserCredentials = React.createClass({
 	}
 });
 
-/*=====  End of Invest Profile Details  ======*/
+/*----------  Manage Profile User Credentials  ----------*/
 
-/*======================================
-=            Invest Deposit            =
-======================================*/
-
-var InvestDepositForm = React.createClass({
+var ManageProfileUserCredentials = React.createClass({
 	getInitialState: function () {
 		return {
-			depositDate: moment().format('MM/DD/YYYY'),
-			depositAmount: "0.00",
-			notes: ''
+			email: '',
+			username: '',
+			password: '',
+			confirmPassword: '' 
 		};
-	},
-	componentDidMount: function () {
-		var self = this;
-		$("#datetimepicker-depositDate").datepicker({
-			autoclose: true
-		}).on('changeDate', function(e){
-			self.setState({depositDate: e.date});
-		});
 	},
 	handleChange: function (name, e) {
 		var change = {};
 		change[name] = e.target.value;
 		this.setState(change);
 	},
-	handleSubmit: function (e) {
+	handleSubmitEmail: function (e) {
 		e.preventDefault();
-
-		this.props.modalViewChange('DEPOSIT-SAVING');
+		
+		this.props.modalViewChange('CHANGE-EMAIL-SAVING');
 		$("#InvestMessageContainerModal").modal();
 		$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = false;
 		$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = 'static';
 
 		var postData = {
-			id: this.props.selectedInvestorId,
-			depositDate: this.state.depositDate,
-			depositAmount: accounting.unformat(this.state.depositAmount),
-			notes: this.state.notes
+			id: this.props.profileData.user.id,
+			email: this.state.email.trim()
 		};
+
+		this.setState({
+			email: postData.email
+		});
 
 		$.each(postData, function (key, value) {
 			$("#fg-" + key).removeClass('has-error');
@@ -641,16 +1113,28 @@ var InvestDepositForm = React.createClass({
 		});
 
 		$.ajax({
-			url: 'api/transaction/deposit',
+			url: '/api/investment/updateEmailAddress',
 			type: 'POST',
 			data: postData,
 			success: function (response) {
 				console.log(response.status);
-				this.props.modalViewChange('DEPOSIT-SUCCESS');
-				this.props.mainViewChange('DETAILS');
+				if(response.status === 'success')
+				{
+					this.props.profileDataChange();
+					this.props.modalViewChange('CHANGE-EMAIL-SAVED');
+					this.setState({
+						email: '',
+						username: '',
+						password: '',
+						confirmPassword: '' 
+					});
+				}
+				else if(response.status === 'unchanged')
+				{
+					this.props.modalViewChange('CHANGE-EMAIL-UNCHANGED');
+				}	
 				$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
 				$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
-
 			}.bind(this),
 			error: function (response) {
 				if(response.status === 422)
@@ -663,229 +1147,214 @@ var InvestDepositForm = React.createClass({
 				}
 				else
 				{
-					this.props.modalViewChange('DEPOSIT-ERROR');
+					this.props.modalViewChange('CHANGE-EMAIL-ERROR');
 					$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
 					$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
 				}
 			}.bind(this)
 		});
 	},
-	amountBlurred: function () {
-		this.setState({depositAmount: accounting.formatNumber(this.state.depositAmount, 2)});
+	handleSubmitUsername: function (e) {
+		e.preventDefault();
+		
+		this.props.modalViewChange('CHANGE-USERNAME-SAVING');
+		$("#InvestMessageContainerModal").modal();
+		$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = false;
+		$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = 'static';
+
+		var postData = {
+			id: this.props.profileData.user.id,
+			username: this.state.username.trim()
+		};
+
+		this.setState({
+			username: postData.username
+		});
+
+		$.each(postData, function (key, value) {
+			$("#fg-" + key).removeClass('has-error');
+			$("#input-" + key).popover('destroy');
+		});
+
+		$.ajax({
+			url: '/api/investment/updateUsername',
+			type: 'POST',
+			data: postData,
+			success: function (response) {
+				console.log(response.status);
+				if(response.status === 'success')
+				{
+					this.props.profileDataChange();
+					this.props.modalViewChange('CHANGE-USERNAME-SAVED');
+					this.setState({
+						email: '',
+						username: '',
+						password: '',
+						confirmPassword: '' 
+					});
+				}
+				else if(response.status === 'unchanged')
+				{
+					this.props.modalViewChange('CHANGE-USERNAME-UNCHANGED');
+				}	
+				$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+				$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+			}.bind(this),
+			error: function (response) {
+				if(response.status === 422)
+				{
+					$("#InvestMessageContainerModal").modal('hide');	
+					$.each(response.responseJSON, function (key, value) {
+						$("#fg-" + key).addClass('has-error');
+						$("#input-" + key).popover({trigger: 'hover', content: value, placement: 'top'});
+					});	
+				}
+				else
+				{
+					this.props.modalViewChange('CHANGE-USERNAME-ERROR');
+					$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+					$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+				}
+			}.bind(this)
+		});
 	},
-	amountFocused: function () {
-		this.setState({depositAmount: accounting.unformat(this.state.depositAmount)});
+	handleSubmitPassword: function (e) {
+		e.preventDefault();
+		
+		this.props.modalViewChange('CHANGE-PASSWORD-SAVING');
+		$("#InvestMessageContainerModal").modal();
+		$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = false;
+		$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = 'static';
+
+		var postData = {
+			id: this.props.profileData.user.id,
+			password: this.state.password,
+			confirmPassword: this.state.confirmPassword
+		};
+
+		$.each(postData, function (key, value) {
+			$("#fg-" + key).removeClass('has-error');
+			$("#input-" + key).popover('destroy');
+		});
+
+		$.ajax({
+			url: '/api/investment/updatePassword',
+			type: 'POST',
+			data: postData,
+			success: function (response) {
+				console.log(response.status);
+				if(response.status === 'success')
+				{
+					this.props.profileDataChange();
+					this.props.modalViewChange('CHANGE-PASSWORD-SAVED');
+					this.setState({
+						email: '',
+						username: '',
+						password: '',
+						confirmPassword: '' 
+					});
+				}
+				$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+				$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+			}.bind(this),
+			error: function (response) {
+				if(response.status === 422)
+				{
+					$("#InvestMessageContainerModal").modal('hide');	
+					$.each(response.responseJSON, function (key, value) {
+						$("#fg-" + key).addClass('has-error');
+						$("#input-" + key).popover({trigger: 'hover', content: value, placement: 'top'});
+					});	
+				}
+				else
+				{
+					this.props.modalViewChange('CHANGE-PASSWORD-ERROR');
+					$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+					$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+				}
+			}.bind(this)
+		});
 	},
 	render: function () {
 		return (
-			<div className="col-md-4 col-md-offset-4">
-				<div className="panel panel-default">
-					<div className="panel-heading">
-						Deposit Investment
-					</div>
-					<div className="panel-body">
-						<div className="row">
-							<div className="col-md-12">
-								<form onSubmit={this.handleSubmit}>
-									<div className="form-group has-feedback" id="fg-depositDate">
-										<label className="control-label" htmlFor="input-depositDate">Date Deposit</label>
-											<div className="input-group date" id="datetimepicker-depositDate">
-												<input 
-													type="text" 
-													id="input-depositDate"
-													className="form-control"
-													size="16"
-													value={this.state.depositDate}
-													onChange={this.handleChange.bind(null, 'depositDate')}/>
-												<span className="input-group-addon">
-													<span className="glyphicon glyphicon-calendar"></span>
-												</span>
-											</div>
-									</div>
-									<div className="form-group" id="fg-depositAmount">
-										<label className="control-label" htmlFor="input-depositAmount">Amount Deposit</label>
-										<div className="input-group">
-											<span className="input-group-addon">
-												<span>Php</span>
-											</span>
-											<input 
-												type="text" 
-												id="input-depositAmount"
-												className="form-control text-right"
-												value={this.state.depositAmount}
-												onFocus={this.amountFocused}
-												onBlur={this.amountBlurred}
-												onChange={this.handleChange.bind(null, 'depositAmount')}/>
-										</div>
-									</div>
-									<div className="form-group">
-										<label>Notes/Reason <small>(optional)</small></label>
-										<textarea 
-											className="form-control"
-											rows="5"
-											value={this.state.notes}
-											onChange={this.handleChange.bind(null, 'notes')}/>
-
-									</div>
-									<div className="form-group">
-										<div className="pull-right">
-											<div className="btn-group">
-												<button type="button" className="btn btn-default" onClick={this.props.mainViewChange.bind(null, 'DETAILS')}>Cancel</button>
-												<button type="submit" className="btn btn-primary">Add Deposit</button>
-											</div>
-										</div>
-									</div>
-								</form>
-							</div>
-						</div>
+			<div className="panel panel-default">
+				<div className="panel-heading">
+					Manage User Credentials
+					<div className="pull-right">
+						<button type="button" className="close" onClick={this.props.profileViewChange.bind(null, undefined)}>&times;</button>
 					</div>
 				</div>
-			</div>
-		);
-	}
-});
-
-/*=====  End of Invest Deposit  ======*/
-
-/*=======================================
-=            Invest Withdraw            =
-=======================================*/
-
-var InvestWithdrawForm = React.createClass({
-	getInitialState: function () {
-		return {
-			withdrawDate: moment().format('MM/DD/YYYY'),
-			withdrawAmount: "0.00",
-			notes: ''
-		};
-	},
-	componentDidMount: function () {
-		var self = this;
-		$("#datetimepicker-withdrawDate").datepicker({
-			autoclose: true
-		}).on('changeDate', function(e){
-			self.setState({withdrawDate: e.date});
-		});
-	},
-	handleChange: function (name, e) {
-		var change = {};
-		change[name] = e.target.value;
-		this.setState(change);
-	},
-	handleSubmit: function (e) {
-		e.preventDefault();
-
-		this.props.modalViewChange('WITHDRAW-SAVING');
-		$("#InvestMessageContainerModal").modal();
-		$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = false;
-		$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = 'static';
-
-		var postData = {
-			id: this.props.selectedInvestorId,
-			withdrawDate: this.state.withdrawDate,
-			withdrawAmount: accounting.unformat(this.state.withdrawAmount),
-			notes: this.state.notes
-		};
-
-		$.each(postData, function (key, value) {
-			$("#fg-" + key).removeClass('has-error');
-			$("#input-" + key).popover('destroy');
-		});
-
-		$.ajax({
-			url: 'api/transaction/withdraw',
-			type: 'POST',
-			data: postData,
-			success: function (response) {
-				console.log(response.status);
-				this.props.modalViewChange('WITHDRAW-SUCCESS');
-				this.props.mainViewChange('DETAILS');
-				$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
-				$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
-
-			}.bind(this),
-			error: function (response) {
-				if(response.status === 422)
-				{
-					$("#InvestMessageContainerModal").modal('hide');	
-					$.each(response.responseJSON, function (key, value) {
-						$("#fg-" + key).addClass('has-error');
-						$("#input-" + key).popover({trigger: 'hover', content: value, placement: 'top'});
-					});	
-				}
-				else
-				{
-					this.props.modalViewChange('WITHDRAW-ERROR');
-					$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
-					$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
-				}
-			}.bind(this)
-		});
-	},
-	amountBlurred: function () {
-		this.setState({withdrawAmount: accounting.formatNumber(this.state.withdrawAmount, 2)});
-	},
-	amountFocused: function () {
-		this.setState({withdrawAmount: accounting.unformat(this.state.withdrawAmount)});
-	},
-	render: function () {
-		return (
-			<div className="col-md-4 col-md-offset-4">
-				<div className="panel panel-default">
-					<div className="panel-heading">
-						Withdraw Investment
+				<div className="panel-body">
+					<div className="page-header">
+						<h2>Edit E-mail Address</h2>
 					</div>
-					<div className="panel-body">
-						<div className="row">
-							<form onSubmit={this.handleSubmit}>
-								<div className="col-md-12">
-									<div className="form-group has-feedback" id="fg-withdrawDate">
-										<label className="control-label" htmlFor="input-withdrawDate">Date Withdraw</label>
-											<div className="input-group date" id="datetimepicker-withdrawDate">
-												<input 
-													type="text" 
-													id="input-withdrawDate"
-													className="form-control"
-													size="16"
-													value={this.state.withdrawDate}
-													onChange={this.handleChange.bind(null, 'withdrawDate')}/>
-												<span className="input-group-addon">
-													<span className="glyphicon glyphicon-calendar"></span>
-												</span>
-											</div>
-									</div>
-									<div className="form-group" id="fg-withdrawAmount">
-										<label className="control-label" htmlFor="input-withdrawAmount">Amount Withdraw</label>
-										<div className="input-group">
-											<span className="input-group-addon">
-													<span>Php</span>
-												</span>
-											<input 
-												type="text" 
-												id="input-withdrawAmount"
-												className="form-control text-right"
-												value={this.state.withdrawAmount}
-												onFocus={this.amountFocused}
-												onBlur={this.amountBlurred}
-												onChange={this.handleChange.bind(null, 'withdrawAmount')}/>
-										</div>
-									</div>
-									<div className="form-group">
-										<label>Notes/Reason <small>(optional)</small></label>
-										<textarea 
-											className="form-control"
-											rows="5"
-											value={this.state.notes}
-											onChange={this.handleChange.bind(null, 'notes')}/>
-									</div>
-									<div className="form-group">
-										<div className="pull-right">
-											<div className="btn-group">
-												<button type="button" className="btn btn-default" onClick={this.props.mainViewChange.bind(null, 'DETAILS')}>Cancel</button>
-												<button type="submit" className="btn btn-primary">Add Withdrawal</button>
-											</div>
-										</div>
-									</div>
+					<div className="row">
+						<div className="col-md-6">
+							<form onSubmit={this.handleSubmitEmail}>
+								<div className="form-group" id="fg-email">
+									<label className="control-label" htmlFor="input-email">New Email Address</label>
+									<input 
+										type="text"
+										className="form-control"
+										id="input-email"
+										value={this.state.email}
+										placeholder={this.props.profileData.user.email}
+										onChange={this.handleChange.bind(null, 'email')}/>
+								</div>
+								<div className="form-group">
+									<button type="submit" className="btn btn-primary">Update Email Address</button>
+								</div>
+							</form>
+						</div>
+					</div>
+					<div className="page-header">
+						<h2>Edit Username</h2>
+					</div>
+					<div className="row">
+						<div className="col-md-6">
+							<form onSubmit={this.handleSubmitUsername}>
+								<div className="form-group" id="fg-username">
+									<label className="control-label" htmlFor="input-username">New Username</label>
+									<input 
+										type="text"
+										className="form-control"
+										id="input-username"
+										value={this.state.username}
+										placeholder={this.props.profileData.user.username === null ? 'Username not set.' : this.props.profileData.user.username === null }
+										onChange={this.handleChange.bind(null, 'username')}/>
+								</div>
+								<div className="form-group">
+									<button type="submit" className="btn btn-primary">Update Username</button>
+								</div>
+							</form>
+						</div>
+					</div>
+					<div className="page-header">
+						<h2>Edit Password</h2>
+					</div>
+					<div className="row">
+						<div className="col-md-6">
+							<form onSubmit={this.handleSubmitPassword}>
+								<div className="form-group" id="fg-password">
+									<label className="control-label" htmlFor="input-password">New Password</label>
+									<input 
+										type="password"
+										className="form-control"
+										id="input-password"
+										value={this.state.password}
+										onChange={this.handleChange.bind(null, 'password')}/>
+								</div>
+								<div className="form-group" id="fg-confirmPassword">
+									<label className="control-label" htmlFor="input-confirmPassword">Confirm New Password</label>
+									<input 
+										type="password"
+										className="form-control"
+										id="input-confirmPassword"
+										value={this.state.confirmPassword}
+										onChange={this.handleChange.bind(null, 'confirmPassword')}/>
+								</div>
+								<div className="form-group">
+									<button type="submit" className="btn btn-primary">Update Password</button>
 								</div>
 							</form>
 						</div>
@@ -896,7 +1365,7 @@ var InvestWithdrawForm = React.createClass({
 	}
 });
 
-/*=====  End of Invest Withdraw  ======*/
+/*=====  End of Invest Profile Details  ======*/
 
 /*=============================================
 =            Invest Message Modals            =
@@ -982,10 +1451,23 @@ var InvestMessageContainerModal = React.createClass({
 										</div>;
 				break;
 
-			case 'DEPOSIT-SAVING':
+			case 'EMAIL-VALIDATED':
+				modalMessageComponent = <div className="panel-custom-info">
+										   	<div className="panel-body">
+										   		<div className="row">
+										   			<div className="col-md-12">
+														<i className="fa fa-check-circle fa-fw"></i> Email already verified.
+											   			<button className="close" data-dismiss="modal">&times;</button>
+										   			</div>
+										   		</div>
+										   	</div>
+										</div>;
+				break;
+
+			case 'TRANSACTION-SAVING':
 				modalMessageComponent = <div className="panel panel-default">
 											<div className="panel-heading">
-												Saving Deposit
+												Saving Transaction
 											</div>
 											<div className="panel-body">
 												<div className="row">
@@ -1000,12 +1482,12 @@ var InvestMessageContainerModal = React.createClass({
 										</div>;
 				break;
 
-			case 'DEPOSIT-SUCCESS':
+			case 'TRANSACTION-SUCCESS':
 				modalMessageComponent = <div className="panel-custom-success">
 										   	<div className="panel-body">
 										   		<div className="row">
 										   			<div className="col-md-12">
-														<i className="fa fa-check-circle fa-fw"></i> New Deposit Added.
+														<i className="fa fa-check-circle fa-fw"></i> New Transaction Saved.
 											   			<button className="close" data-dismiss="modal">&times;</button>
 										   			</div>
 										   		</div>
@@ -1013,12 +1495,12 @@ var InvestMessageContainerModal = React.createClass({
 										</div>;
 				break;
 
-			case 'DEPOSIT-ERROR':
+			case 'UPDATE-TRANSACTION-ERROR':
 				modalMessageComponent = <div className="panel-custom-error">
 										   	<div className="panel-body">
 										   		<div className="row">
 										   			<div className="col-md-12">
-														<i className="fa fa-check-circle fa-fw"></i> Deposit not saved. Please try again.
+														<i className="fa fa-check-circle fa-fw"></i> Transaction not Saved. Please try again.
 											   			<button className="close" data-dismiss="modal">&times;</button>
 										   			</div>
 										   		</div>
@@ -1026,10 +1508,10 @@ var InvestMessageContainerModal = React.createClass({
 										</div>;
 				break;
 
-			case 'WITHDRAW-SAVING':
+			case 'UPDATE-TRANSACTION-SAVING':
 				modalMessageComponent = <div className="panel panel-default">
 											<div className="panel-heading">
-												Saving Withdrawal
+												Updating Transaction
 											</div>
 											<div className="panel-body">
 												<div className="row">
@@ -1044,12 +1526,12 @@ var InvestMessageContainerModal = React.createClass({
 										</div>;
 				break;
 
-			case 'WITHDRAW-SUCCESS':
+			case 'UPDATE-TRANSACTION-SUCCESS':
 				modalMessageComponent = <div className="panel-custom-success">
 										   	<div className="panel-body">
 										   		<div className="row">
 										   			<div className="col-md-12">
-														<i className="fa fa-check-circle fa-fw"></i> New Withdrawal Added.
+														<i className="fa fa-check-circle fa-fw"></i> Transaction Updated.
 											   			<button className="close" data-dismiss="modal">&times;</button>
 										   			</div>
 										   		</div>
@@ -1057,18 +1539,177 @@ var InvestMessageContainerModal = React.createClass({
 										</div>;
 				break;
 
-			case 'WITHDRAW-ERROR':
+			case 'TRANSACTION-ERROR':
 				modalMessageComponent = <div className="panel-custom-error">
 										   	<div className="panel-body">
 										   		<div className="row">
 										   			<div className="col-md-12">
-														<i className="fa fa-check-circle fa-fw"></i> Withdrawal not saved. Please try again.
+														<i className="fa fa-check-circle fa-fw"></i> Transaction not Updated. Please try again.
 											   			<button className="close" data-dismiss="modal">&times;</button>
 										   			</div>
 										   		</div>
 										   	</div>
 										</div>;
 				break;
+
+			case 'CHANGE-EMAIL-SAVING':
+				modalMessageComponent = <div className="panel panel-default">
+											<div className="panel-heading">
+												Updating Email Address
+											</div>
+											<div className="panel-body">
+												<div className="row">
+													<div className="col-md-12">
+														<div className="form-group">
+															<p className="text-center"><i className="fa fa-circle-o-notch fa-2x fa-spin"></i></p>
+															<p className="text-center">Please wait a moment.</p>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>;
+				break;
+
+			case 'CHANGE-EMAIL-SAVED':
+				modalMessageComponent = <div className="panel-custom-success">
+										   	<div className="panel-body">
+										   		<div className="row">
+										   			<div className="col-md-12">
+														<i className="fa fa-check-circle fa-fw"></i> Email Address Updated.
+											   			<button className="close" data-dismiss="modal">&times;</button>
+										   			</div>
+										   		</div>
+										   	</div>
+										</div>;
+				break;
+
+			case 'CHANGE-EMAIL-ERROR':
+				modalMessageComponent = <div className="panel-custom-error">
+										   	<div className="panel-body">
+										   		<div className="row">
+										   			<div className="col-md-12">
+														<i className="fa fa-check-circle fa-fw"></i> Updating Email Failed. Please try again.
+											   			<button className="close" data-dismiss="modal">&times;</button>
+										   			</div>
+										   		</div>
+										   	</div>
+										</div>;
+				break;
+
+			case 'CHANGE-EMAIL-UNCHANGED':
+				modalMessageComponent = <div className="panel-custom-info">
+										   	<div className="panel-body">
+										   		<div className="row">
+										   			<div className="col-md-12">
+														<i className="fa fa-check-circle fa-fw"></i> Email not changed.
+											   			<button className="close" data-dismiss="modal">&times;</button>
+										   			</div>
+										   		</div>
+										   	</div>
+										</div>;
+				break;
+
+			case 'CHANGE-USERNAME-SAVING':
+				modalMessageComponent = <div className="panel panel-default">
+											<div className="panel-heading">
+												Updating Username
+											</div>
+											<div className="panel-body">
+												<div className="row">
+													<div className="col-md-12">
+														<div className="form-group">
+															<p className="text-center"><i className="fa fa-circle-o-notch fa-2x fa-spin"></i></p>
+															<p className="text-center">Please wait a moment.</p>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>;
+				break;
+
+			case 'CHANGE-USERNAME-SAVED':
+				modalMessageComponent = <div className="panel-custom-success">
+										   	<div className="panel-body">
+										   		<div className="row">
+										   			<div className="col-md-12">
+														<i className="fa fa-check-circle fa-fw"></i> Username Updated.
+											   			<button className="close" data-dismiss="modal">&times;</button>
+										   			</div>
+										   		</div>
+										   	</div>
+										</div>;
+				break;
+
+			case 'CHANGE-USERNAME-ERROR':
+				modalMessageComponent = <div className="panel-custom-error">
+										   	<div className="panel-body">
+										   		<div className="row">
+										   			<div className="col-md-12">
+														<i className="fa fa-check-circle fa-fw"></i> Updating Username Failed. Please try again.
+											   			<button className="close" data-dismiss="modal">&times;</button>
+										   			</div>
+										   		</div>
+										   	</div>
+										</div>;
+				break;
+
+			case 'CHANGE-USERNAME-UNCHANGED':
+				modalMessageComponent = <div className="panel-custom-info">
+										   	<div className="panel-body">
+										   		<div className="row">
+										   			<div className="col-md-12">
+														<i className="fa fa-check-circle fa-fw"></i> Username not changed.
+											   			<button className="close" data-dismiss="modal">&times;</button>
+										   			</div>
+										   		</div>
+										   	</div>
+										</div>;
+				break;
+
+			case 'CHANGE-PASSWORD-SAVING':
+				modalMessageComponent = <div className="panel panel-default">
+											<div className="panel-heading">
+												Updating Password
+											</div>
+											<div className="panel-body">
+												<div className="row">
+													<div className="col-md-12">
+														<div className="form-group">
+															<p className="text-center"><i className="fa fa-circle-o-notch fa-2x fa-spin"></i></p>
+															<p className="text-center">Please wait a moment.</p>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>;
+				break;
+
+			case 'CHANGE-PASSWORD-SAVED':
+				modalMessageComponent = <div className="panel-custom-success">
+										   	<div className="panel-body">
+										   		<div className="row">
+										   			<div className="col-md-12">
+														<i className="fa fa-check-circle fa-fw"></i> Password Updated.
+											   			<button className="close" data-dismiss="modal">&times;</button>
+										   			</div>
+										   		</div>
+										   	</div>
+										</div>;
+				break;
+
+			case 'CHANGE-PASSWORD-ERROR':
+				modalMessageComponent = <div className="panel-custom-error">
+										   	<div className="panel-body">
+										   		<div className="row">
+										   			<div className="col-md-12">
+														<i className="fa fa-check-circle fa-fw"></i> Updating Password Failed. Please try again.
+											   			<button className="close" data-dismiss="modal">&times;</button>
+										   			</div>
+										   		</div>
+										   	</div>
+										</div>;
+				break;
+
 
 		}
 		return (
@@ -1147,20 +1788,6 @@ var InvestMain = React.createClass({
 
 			case 'DETAILS':
 				view = 	<InvestDetailView 
-							selectedInvestorId={this.state.selectedInvestorId}
-							modalViewChange={this.onModalViewChange}
-							mainViewChange={this.onMainViewChange}/>;
-				break;
-
-			case 'DEPOSIT':
-				view = 	<InvestDepositForm 
-							selectedInvestorId={this.state.selectedInvestorId}
-							modalViewChange={this.onModalViewChange}
-							mainViewChange={this.onMainViewChange}/>;
-				break;
-
-			case 'WITHDRAW':
-				view = 	<InvestWithdrawForm 
 							selectedInvestorId={this.state.selectedInvestorId}
 							modalViewChange={this.onModalViewChange}
 							mainViewChange={this.onMainViewChange}/>;

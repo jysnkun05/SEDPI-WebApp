@@ -10,6 +10,10 @@ class Transaction extends Model
     protected $table = 'transactions';
     protected $dates = ['transaction_date', 'created_at', 'updated_at'];
     protected $fillable = [
-    	'id', 'transaction_date', 'transaction_type', 'amount', 'notes', 'investor_id'
+    	'id', 'transactionDate', 'transaction_type_id', 'amount', 'notes', 'investor_id'
    	];
+
+   	public function transactionType () {
+   		return $this->belongsTo('App\TransactionType');
+   	}
 }

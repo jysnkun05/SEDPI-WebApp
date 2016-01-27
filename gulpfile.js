@@ -124,6 +124,8 @@ gulp.task('investors-min', function () {
 		.pipe(gulp.dest('./public/js/app-min/'));
 });
 
+gulp.task('app-min', ['application-min', 'investors-min', 'investment-min']);
+
 gulp.task('watch', function () {
 	gulp.watch('./resources/assets/js/app/application/apply.js', ['apply']);
 	gulp.watch('./resources/assets/js/app/application/verify.js', ['verify']);

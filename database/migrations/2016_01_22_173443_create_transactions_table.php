@@ -14,8 +14,8 @@ class CreateTransactionsTable extends Migration
     {
         Schema::connection('investor')->create('transactions', function (Blueprint $table) {
             $table->increments('id');
-            $table->date('transaction_date');
-            $table->string('transaction_type', 2);
+            $table->date('transactionDate');
+            $table->integer('transaction_type_id');
             $table->decimal('amount', 12, 2);
             $table->decimal('runningBalance', 12, 2);
             $table->text('notes')->nullable();

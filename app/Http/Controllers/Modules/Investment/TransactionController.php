@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Modules\Investment;
 
 use Illuminate\Http\Request;
+use DB;
 use App\Transaction;
+use App\TransactionType;
 use App\Investor;
 use Carbon\Carbon;
 
-use App\Http\Requests\Modules\Investment\SaveDepositPostRequest;
-use App\Http\Requests\Modules\Investment\SaveWithdrawalPostRequest;
+use App\Http\Requests\Modules\Investment\SaveTransactionPostRequest;
 use App\Http\Controllers\Controller;
 
 class TransactionController extends Controller
@@ -18,48 +19,58 @@ class TransactionController extends Controller
     	return view('modules.investment.transaction');
     }
 
-    public function deposit (SaveDepositPostRequest $request)
+    public function getTransactionTypes() 
     {
-    	$transaction = Transaction::create([
-    		'transaction_date' => Carbon::parse($request->input('depositDate'))->toDateString(),
-    		'transaction_type' => 'DP',
-    		'amount' => $request->input('depositAmount'),
-    		'investor_id' => $request->input('id'),
-    		'notes' => $request->input('notes') === '' ? null : $request->input('notes') 
-    	]);
-
-    	$transaction->runningBalance = $this->computeBalance($request->input('id'));
-    	$transaction->save();
-
-    	$investor = Investor::find($request->input('id'));
-    	$investor->balance = $transaction->runningBalance;
-    	$investor->save();
-
-    	return response()->json([
-    		'status' => 'success'
-    	]);
+        $types = TransactionType::all(['id', 'code', 'description']);
+        return $types;
     }
 
-    public function withdraw (SaveWithdrawalPostRequest $request)
+    public function getTransactionDetails(Request $request) 
     {
-    	$transaction = Transaction::create([
-    		'transaction_date' => Carbon::parse($request->input('withdrawDate'))->toDateString(),
-    		'transaction_type' => 'WD',
-    		'amount' => $request->input('withdrawAmount'),
-    		'investor_id' => $request->input('id'),
-    		'notes' => $request->input('notes') === '' ? null : $request->input('notes') 
-    	]);
+        $details = Transaction::find($request->input('id'));
+        return $details;
+    }
 
-    	$transaction->runningBalance = $this->computeBalance($request->input('id'));
-    	$transaction->save();
+    public function saveTransaction(SaveTransactionPostRequest $request)
+    {
+        DB::transaction(function () use ($request) {
+            $transaction = Transaction::create([
+                'transactionDate' => Carbon::parse($request->input('transactionDate'))->toDateString(),
+                'amount' => $request->input('amount'),
+                'transaction_type_id' => $request->input('transaction_type_id'),
+                'investor_id' => $request->input('id'),
+                'notes' => $request->input('notes') === '' ? null : $request->input('notes') 
+            ]);
 
-    	$investor = Investor::find($request->input('id'));
-    	$investor->balance = $transaction->runningBalance;
-    	$investor->save();
+            $investor = Investor::find($request->input('id'));
+            $investor->balance = $this->computeBalance($investor->id);
+            $investor->save();
 
-    	return response()->json([
-    		'status' => 'success'
-    	]);
+            return response()->json([
+                'status' => 'success'
+            ]);
+        });
+    }
+
+    public function updateTransaction(SaveTransactionPostRequest $request)
+    {
+        DB::transaction(function () use ($request) {
+            $transaction = Transaction::find($request->input('id'));
+
+            $transaction->transactionDate = Carbon::parse($request->input('transactionDate'))->toDateString();
+            $transaction->amount = $request->input('amount');
+            $transaction->transaction_type_id = $request->input('transaction_type_id');
+            $transaction->notes = $request->input('notes') === '' ? null : $request->input('notes');
+            $transaction->save();
+
+            $investor = Investor::find($transaction->investor_id);
+            $investor->balance = $this->computeBalance($investor->id);
+            $investor->save();
+
+            return response()->json([
+                'status' => 'success'
+            ]);
+        });
     }
 
     protected function computeBalance($id) 
@@ -67,18 +78,19 @@ class TransactionController extends Controller
     	$balance = 0;
 
     	$transactions = Transaction::where('investor_id', $id)
-            ->orderBy('transaction_date', 'asc')
-            ->get(['id', 'transaction_date', 'transaction_type', 'amount']);
+            ->orderBy('transactionDate', 'asc')
+            ->get();
 
         foreach($transactions as $key => $value) {
-        	if($value->transaction_type === 'DP' || $value->transaction_type === 'DV')
-        		$balance += $value->amount;
-        	else if($value->transaction_type === 'WD')
+        	if($value->transactionType->account_type === 'DR')
         		$balance -= $value->amount;
+            else
+                $balance += $value->amount;
+
+            $value->runningBalance = $balance;
+            $value->save();
         }
 
         return $balance;
-
-
     }
 }

@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests\Modules\Investment;
 
-use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\Request;
+use App\User;
 
-class SaveInvestorPostRequest extends Request
+class UpdateEmailAddressPostRequest extends Request
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -14,10 +14,7 @@ class SaveInvestorPostRequest extends Request
      */
     public function authorize()
     {
-        if(Auth::user()->userRole->name === 'Super Admin')
-            return true;
-        else
-            return false;   
+        return true;
     }
 
     /**
@@ -28,9 +25,7 @@ class SaveInvestorPostRequest extends Request
     public function rules()
     {
         return [
-            'firstName' => 'required',
-            'lastName' => 'required',
-            'email' => 'required|email|unique:users'
+            'email' => 'required|email|unique:users,email,'.$this->input('id')
         ];
     }
 
@@ -41,5 +36,5 @@ class SaveInvestorPostRequest extends Request
             'email.email'   => 'This field must be an email address.',
             'email.unique'  => 'This e-mail address already exists. Please try another one.'
         ];
-    } 
+    }
 }

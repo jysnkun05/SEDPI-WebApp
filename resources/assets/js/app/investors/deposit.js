@@ -1,7 +1,8 @@
-/*====================================
-=            Deposit View            =
-====================================*/
-var DepositLandingView = React.createClass({
+/*=====================================
+=            Deposit Views            =
+=====================================*/
+
+var DepositMainView = React.createClass({
 	render: function () {
 		return (
 			<div className="col-md-8 col-md-offset-2">
@@ -29,10 +30,77 @@ var DepositLandingView = React.createClass({
 /*----------  Deposit Advice View  ----------*/
 
 var DepositAdviceView = React.createClass({
+	getInitialState: function () {
+		return {
+			amount: '0.00',
+			dateDeposit: moment().format('MM/DD/YYYY')
+		};
+	},
+	componentDidMount: function () {
+		var self = this;
+		$("#datetimepicker-dateDeposit").datepicker({
+			autoclose: true
+		}).on('changeDate', function(e){
+			self.setState({dateDeposit: e.date});
+		});
+	},
+	handleChange: function (name, e) {
+		var change = {};
+		change[name] = e.target.value;
+		this.setState(change);
+	},
 	handleSubmit: function (e) {
 		e.preventDefault();
-		console.log('hello');
-		this.props.mainViewChange('FINISH');
+
+		this.props.modalViewChange('ADVICE-SAVING');
+		$("#DepositMessageContainerModal").modal();
+		$("#DepositMessageContainerModal").data('bs.modal').options.keyboard = false;
+		$("#DepositMessageContainerModal").data('bs.modal').options.backdrop = 'static';
+
+		var postData = {
+			amount: accounting.unformat(this.state.amount),
+			dateDeposit: this.state.dateDeposit
+		};
+
+		$.each(postData, function (key, value) {
+			$("#fg-" + key).removeClass('has-error');
+			$("#input-" + key).popover('destroy');
+		});
+
+		$.ajax({
+			url: '/api/investors/saveAdviceDeposit',
+			type:  'POST',
+			dataType: 'json',
+			data: postData,
+			success: function (response) {
+				this.props.modalViewChange('ADVICE-SUCCESS');
+				this.props.mainViewChange('DEPOSIT-INSTRUCTION');
+				$("#DepositMessageContainerModal").data('bs.modal').options.keyboard = true;
+				$("#DepositMessageContainerModal").data('bs.modal').options.backdrop = true;
+			}.bind(this),
+			error: function (response) {
+				if(response.status === 422)
+				{
+					$("#DepositMessageContainerModal").modal('hide');
+					$.each(response.responseJSON, function (key, value) {
+						$("#fg-" + key).addClass('has-error');
+						$("#input-" + key).popover({trigger: 'hover', content: value, placement: 'top'});
+					});	
+				}
+				else
+				{
+					this.props.modalViewChange('ADVICE-ERROR');
+					$("#DepositMessageContainerModal").data('bs.modal').options.keyboard = true;
+					$("#DepositMessageContainerModal").data('bs.modal').options.backdrop = true;
+				}
+			}
+		});
+	},
+	amountBlurred: function () {
+		this.setState({amount: accounting.formatNumber(this.state.amount, 2)});
+	},
+	amountFocused: function () {
+		this.setState({amount: accounting.unformat(this.state.amount)});
 	},
 	render: function () {
 		return (
@@ -46,22 +114,41 @@ var DepositAdviceView = React.createClass({
 							<div className="col-md-12">
 								<div className="form-group">
 									<form onSubmit={this.handleSubmit}>
-										<div className="form-group">
-											<label>Amount Deposit</label>
-											<input 
-												type="text"
-												className="form-control"/>
+										<div className="form-group" id="fg-amount">
+											<label className="control-label" htmlFor="input-amount">Amount Deposit</label>
+											<div className="input-group">
+												<span className="input-group-addon">
+													<span>Php</span>
+												</span>
+												<input 
+													type="text" 
+													id="input-amount"
+													className="form-control text-right"
+													value={this.state.amount}
+													onFocus={this.amountFocused}
+													onBlur={this.amountBlurred}
+													onChange={this.handleChange.bind(null, 'amount')}/>
+											</div>
 										</div>
-										<div className="form-group">
-											<label>Expected Date of Deposit</label>
-											<input 
-												type="text"
-												className="form-control"/>
+										<div className="form-group has-feedback" id="fg-dateDeposit">
+											<label className="control-label" htmlFor="input-dateDeposit">Date Deposit</label>
+											<div className="input-group date" id="datetimepicker-dateDeposit">
+												<input 
+													type="text" 
+													id="input-dateDeposit"
+													className="form-control"
+													size="16"
+													value={this.state.dateDeposit}
+													onChange={this.handleChange.bind(null, 'dateDeposit')}/>
+												<span className="input-group-addon">
+													<span className="glyphicon glyphicon-calendar"></span>
+												</span>
+											</div>
 										</div>
 										<div className="form-group">
 											<div className="pull-right">
 												<div className="btn-group">
-													<button type="button" className="btn btn-default" onClick={this.props.mainViewChange.bind(null, 'LANDING')}>Cancel</button>
+													<button type="button" className="btn btn-default" onClick={this.props.mainViewChange.bind(null, 'MAIN')}>Cancel</button>
 													<button type="submit" className="btn btn-primary">Submit</button>
 												</div>
 											</div>
@@ -77,9 +164,9 @@ var DepositAdviceView = React.createClass({
 	}
 });
 
-/*----------  Deposit Finish View ----------*/
+/*----------  Deposit Post Advice View ----------*/
 
-var DepositFinishView = React.createClass({
+var DepositInstructionView = React.createClass({
 	render: function () {
 		return (
 			<div className="col-md-8 col-md-offset-2">
@@ -123,7 +210,7 @@ var DepositFinishView = React.createClass({
 								<div className="form-group">
 									<div className="pull-right">
 										<div className="btn-group">
-											<button className="btn btn-primary" onClick={this.props.mainViewChange.bind(null, 'LANDING')}>Back to Deposit Menu</button>
+											<button className="btn btn-primary" onClick={this.props.mainViewChange.bind(null, 'MAIN')}>Back to Deposit Menu</button>
 										</div>
 									</div>
 								</div>
@@ -136,30 +223,71 @@ var DepositFinishView = React.createClass({
 	}
 });
 
-/*----------  Deposit Advice Table View  ----------*/
+/*----------  Deposit Advice Table View   ----------*/
 
 var DepositAdviceTableView = React.createClass({
-	render: function() {
+	getInitialState: function () {
+		return {
+			adviceDeposits: undefined,
+			actualDeposits: undefined
+		};
+	},
+	getDepositDetails: function () {
+		$.ajax({
+			url: '/api/investors/getDepositDetails',
+			type: 'POST',
+			dataType: 'json',
+			success: function (deposits) {
+
+			}
+		});
+	},
+	render: function () {
 		return (
 			<div className="col-md-8 col-md-offset-2">
 				<div className="panel panel-default">
 					<div className="panel-body">
 						<div className="page-header">
-							<h1>Report Actual Deposit</h1>
+							<h2>Your Deposit Advice Details</h2>
 						</div>
 						<div className="row">
 							<div className="col-md-12">
 								<table className="table table-condensed table-striped table-bordered">
 									<thead>
-										<tr className="text-center">
-											<td>#</td>
-											<td>Amount</td>
-											<td>Date Expected</td>
-											<td>Date Submitted</td>
+										<tr>
+											<th className="text-center">Date</th>
+											<th className="text-center">Amount</th>
+											<th className="text-center">Date Expected</th>
+											<th className="text-center">Status</th>
 										</tr>
 									</thead>
 									<tbody>
-										<tr className="text-center clickable-row" onClick={this.props.mainViewChange.bind(null, 'REPORT')}>
+										<tr className="text-center clickable-row">
+											<td>1</td>
+											<td>Php 5,000.00</td>
+											<td>Jan 12, 2016</td>
+											<td>Jan 12, 2016 01:02:23 PM</td>	
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+						<div className="page-header">
+							<h2>Your Actual Deposit Details</h2>
+						</div>
+						<div className="row">
+							<div className="col-md-12">
+								<table className="table table-condensed table-striped table-bordered">
+									<thead>
+										<tr>
+											<th className="text-center">Date</th>
+											<th className="text-center">Amount</th>
+											<th className="text-center">Date Expected</th>
+											<th className="text-center">Status</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr className="text-center clickable-row">
 											<td>1</td>
 											<td>Php 5,000.00</td>
 											<td>Jan 12, 2016</td>
@@ -176,106 +304,73 @@ var DepositAdviceTableView = React.createClass({
 	}
 });
 
-/*----------  Deposit Report View  ----------*/
+/*=====  End of Deposit Views  ======*/
 
-var DepositReportView = React.createClass({
-	handleSubmit: function (e) {
-		e.preventDefault();
-		this.props.mainViewChange('REPORT-FINISH');
-	},
+/*==============================================
+=            Deposit Message Modals            =
+==============================================*/
+
+var DepositMessageContainerModal = React.createClass({
 	render: function () {
-		return (
-			<div className="col-md-8 col-md-offset-2">
-				<div className="panel panel-default">
-					<div className="panel-body">
-						<div className="page-header">
-							<h1>Report Actual Deposit</h1>
-						</div>
-						<div className="row">
-							<div className="col-md-6">
-								<div className="form-group">
-									<label>Deposit Details</label>
-									<table className="table table-bordered table-striped table-condensed">
-										<tbody>
-											<tr>
-												<td className="table-title-col">Date Expected to Deposit</td>
-												<td>Jan 16, 2016</td>
-											</tr>
-											<tr>
-												<td className="table-title-col">Amount Deposit</td>
-												<td>Php 5,000.00</td>
-											</tr>
-										</tbody>
-									</table>
-								</div>
-							</div>
-							<div className="col-md-6">
-								<form onSubmit={this.handleSubmit}>
-									<div className="form-group">
-										<label>Bank/RemittanceChannel</label>
-										<input 
-											type="text"
-											className="form-control"/>
-									</div>
-									<div className="form-group">
-										<label>Upload Image</label>
-										<div className="panel panel-default">
+		var modalMessageComponent;
+			var modalView = this.props.modalView;
+			switch(modalView) {
+				case 'ADVICE-SAVING':
+				modalMessageComponent = <div className="panel panel-default">
+											<div className="panel-heading">
+												Saving Your Deposit Advice
+											</div>
 											<div className="panel-body">
-												<img src="/images/img_placeholder.png" width="100%" />
+												<div className="row">
+													<div className="col-md-12">
+														<div className="form-group">
+															<p className="text-center"><i className="fa fa-circle-o-notch fa-2x fa-spin"></i></p>
+															<p className="text-center">Please wait a moment.</p>
+														</div>
+													</div>
+												</div>
 											</div>
-										</div>
-									</div>
-									<div className="form-group">
-										<div className="pull-right">
-											<div className="btn-group">
-												<button type="button" className="btn btn-default" onClick={this.props.mainViewChange.bind(null, 'LANDING')}>Cancel</button>
-												<button type="submit" className="btn btn-primary">Submit</button>
-											</div>
-										</div>
-									</div>
-								</form>
-							</div>
-						</div>
+										</div>;
+				break;
+
+				case 'ADVICE-SUCCESS':
+				modalMessageComponent = <div className="panel-custom-success">
+										   	<div className="panel-body">
+										   		<div className="row">
+										   			<div className="col-md-12">
+														<i className="fa fa-check-circle fa-fw"></i> Your deposit has been saved.
+											   			<button className="close" data-dismiss="modal">&times;</button>
+										   			</div>
+										   		</div>
+										   	</div>
+										</div>;
+				break;
+
+				case 'ADVIVE-ERROR':
+				modalMessageComponent = <div className="panel-custom-error">
+										   	<div className="panel-body">
+										   		<div className="row">
+										   			<div className="col-md-12">
+														<i className="fa fa-times-circle fa-fw"></i> Your adviced deposit not saved. Please try again.
+											   			<button className="close" data-dismiss="modal">&times;</button>
+										   			</div>
+										   		</div>
+										   	</div>
+										</div>;
+				break;
+			}
+			return (		
+				<div className="modal fade" id="DepositMessageContainerModal" role="dialog">
+					<div className="modal-dialog" role="document">
+						{ modalMessageComponent }
 					</div>
 				</div>
-			</div>
 		);
 	}
 });
 
-/*----------  Deposit Report Finish View  ----------*/
+/*=====  End of Deposit Message Modals  ======*/
 
-var DepositReportFinishView = React.createClass({
-	render: function () {
-		return (
-			<div className="col-md-8 col-md-offset-2">
-				<div className="panel panel-default">
-					<div className="panel-body">
-						<div className="page-header">
-							<h1>Report Actual Deposit</h1>
-						</div>
-						<div className="row">
-							<div className="col-md-10 col-md-offset-1">
-								<h2>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</h2>
-								<p className="text-justify">{ "Thank you for your deposit. SEDPI will validate your information you've sent." }</p>
-								<div className="form-group">
-									<div className="pull-right">
-										<div className="btn-group">
-											<button className="btn btn-primary" onClick={this.props.mainViewChange.bind(null, 'LANDING')}>Back to Deposit Menu</button>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		);
-	}
-});
-
-
-/*=====  End of Deposit View  ======*/
 
 /*====================================
 =            Deposit Main            =
@@ -284,47 +379,23 @@ var DepositReportFinishView = React.createClass({
 var DepositMain = React.createClass({
 	getInitialState: function () {
 		return {
-			mainView: undefined
+			mainView: undefined,
+			modalView: undefined
 		};
 	},
 	onMainViewChange: function (mainViewKeyword) {
-		switch(mainViewKeyword) {
-			case 'LANDING':
-				this.setState({ mainView: undefined});
-				break;
-
-			case 'ADVICE':
-				this.setState({ mainView: 'ADVICE'});
-				break;
-
-			case 'FINISH':
-				this.setState({ mainView: 'FINISH'});
-				break;
-
-			case 'ADVICE-TABLE':
-				this.setState({ mainView: 'ADVICE-TABLE'});
-				break;
-
-			case 'REPORT':
-				this.setState({ mainView: 'REPORT' });
-				break;
-
-			case 'REPORT-FINISH':
-				this.setState({ mainView: 'REPORT-FINISH' });
-				break;
-		}
+		this.setState({mainView: mainViewKeyword});
+	},	
+	onModalViewChange: function (modalViewKeyword) {
+		this.setState({modalView: modalViewKeyword});
 	},
 	render: function () {
 		var view;
 		switch(this.state.mainView) {
-			case 'ADVICE': 
+			case 'ADVICE':
 				view = <DepositAdviceView 
-							mainViewChange={this.onMainViewChange}/>;
-				break;
-
-			case 'FINISH':
-				view = <DepositFinishView 
-							mainViewChange={this.onMainViewChange}/>;
+							modalViewChange={this.onModalViewChange}
+							mainViewChange={this.onMainViewChange}/>
 				break;
 
 			case 'ADVICE-TABLE':
@@ -332,24 +403,22 @@ var DepositMain = React.createClass({
 							mainViewChange={this.onMainViewChange}/>;
 				break;
 
-			case 'REPORT':
-				view = <DepositReportView 
-							mainViewChange={this.onMainViewChange}/>;
+			case 'DEPOSIT-INSTRUCTION':
+				view = <DepositInstructionView 
+							mainViewChange={this.onMainViewChange}/>
 				break;
 
-			case 'REPORT-FINISH':
-				view = <DepositReportFinishView 
-							mainViewChange={this.onMainViewChange}/>;
-				break;
+
+
 
 			default: 
-				view = <DepositLandingView 
-							mainViewChange={this.onMainViewChange}/>;
+				view = <DepositMainView mainViewChange={this.onMainViewChange}/>;
 				break;
 		}
 		return (
 			<div className="row">
 				{ view }
+				<DepositMessageContainerModal modalView={this.state.modalView}/>
 			</div>
 		);
 	}

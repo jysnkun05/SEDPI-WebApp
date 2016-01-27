@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Modules\Investment;
+namespace App\Http\Requests\Modules\Investors;
 
 use App\Http\Requests\Request;
 
@@ -24,8 +24,8 @@ class SaveDepositPostRequest extends Request
     public function rules()
     {
         return [
-            'depositDate' => 'required|date',
-            'depositAmount' => 'required|numeric|min:1'
+            'dateDeposit' => 'required|date',
+            'amount' => 'required|numeric|min:1'
         ];
     }
 }

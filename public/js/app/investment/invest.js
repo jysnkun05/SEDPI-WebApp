@@ -22,7 +22,7 @@ var InvestTableView = React.createClass({
 		} else if (investors.length > 0) {
 			rows = investors.map(function (investor, index) {
 				investor.fullName = investor.middleName !== null ? investor.firstName + " " + investor.middleName + " " + investor.lastName : investor.firstName + " " + investor.lastName;
-				investor.location = investor.location !== null ? investor.location : 'Not Set';
+				investor.country = investor.country !== null ? investor.country : 'Not Set';
 				investor.member_since = moment.tz(investor.member_since, moment.tz.guess()).format('DD MMM YYYY');
 				investor.balance = accounting.formatMoney(investor.balance, "PhP ");
 				return React.createElement(
@@ -41,7 +41,7 @@ var InvestTableView = React.createClass({
 					React.createElement(
 						"td",
 						null,
-						investor.location
+						investor.country
 					),
 					React.createElement(
 						"td",
@@ -155,7 +155,7 @@ var InvestAddView = React.createClass({
 			firstName: '',
 			middleName: '',
 			lastName: '',
-			location: '',
+			country: '',
 			email: '',
 			retries: 0,
 			countries: undefined
@@ -193,7 +193,7 @@ var InvestAddView = React.createClass({
 			firstName: this.state.firstName.trim(),
 			middleName: this.state.middleName.trim(),
 			lastName: this.state.lastName.trim(),
-			location: this.state.location,
+			country: this.state.country,
 			email: this.state.email.trim()
 		};
 
@@ -321,11 +321,11 @@ var InvestAddView = React.createClass({
 									React.createElement(
 										"label",
 										null,
-										"Location *"
+										"Country"
 									),
 									React.createElement(
 										"select",
-										{ className: "form-control", value: this.state.location, onChange: this.handleChange.bind(null, 'location'), disabled: this.state.countries === undefined },
+										{ className: "form-control", value: this.state.country, onChange: this.handleChange.bind(null, 'country'), disabled: this.state.countries === undefined },
 										this.state.countries !== undefined ? React.createElement(
 											"option",
 											{ value: "", disabled: true },
@@ -394,12 +394,14 @@ var InvestDetailView = React.createClass({
 			detailView: 'PROFILE',
 			profileData: undefined,
 			investmentData: undefined,
+			profileRetries: 0,
+			investmentRetries: 0,
 			retries: 0
 		};
 	},
 	componentWillMount: function () {
-		this.getInvestorProfile(this.props.selectedInvestorId, this.state.retries);
-		this.getInvestorInvestments(this.props.selectedInvestorId, this.state.retries);
+		this.getInvestorProfile(this.props.selectedInvestorId, this.state.profileRetries);
+		this.getInvestorInvestments(this.props.selectedInvestorId, this.state.investmentRetries);
 	},
 	sendEmailVerification: function (id) {
 		this.props.modalViewChange('EMAIL-SENDING');
@@ -412,7 +414,7 @@ var InvestDetailView = React.createClass({
 			data: { id: id },
 			dataType: 'json',
 			success: function (response) {
-				this.props.modalViewChange('EMAIL-SENT');
+				if (response.status === 'success') this.props.modalViewChange('EMAIL-SENT');else if (response.status === 'validated') this.props.modalViewChange('EMAIL-VALIDATED');
 				$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
 				$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
 				this.getInvestorProfile(this.props.selectedInvestorId, this.state.retries);
@@ -424,8 +426,8 @@ var InvestDetailView = React.createClass({
 			}.bind(this)
 		});
 	},
-	getInvestorProfile: function (id, retries) {
-		this.setState({ retries: retries + 1 });
+	getInvestorProfile: function (id, profileRetries) {
+		this.setState({ profileRetries: profileRetries + 1 });
 		$.ajax({
 			url: '/api/investment/getInvestorProfile',
 			type: 'POST',
@@ -435,16 +437,16 @@ var InvestDetailView = React.createClass({
 			success: function (profileData) {
 				this.setState({
 					profileData: profileData,
-					retries: 0
+					profileRetries: 0
 				});
 			}.bind(this),
 			error: function () {
-				if (retries <= 3) this.getInvestorProfile(id, retries);
+				if (profileRetries <= 3) this.getInvestorProfile(id, profileRetries);
 			}.bind(this)
 		});
 	},
-	getInvestorInvestments: function (id, retries) {
-		this.setState({ retries: retries + 1 });
+	getInvestorInvestments: function (id, investmentRetries) {
+		this.setState({ investmentRetries: investmentRetries + 1 });
 		$.ajax({
 			url: '/api/investment/getInvestorInvestments',
 			type: 'POST',
@@ -454,13 +456,19 @@ var InvestDetailView = React.createClass({
 			success: function (investmentData) {
 				this.setState({
 					investmentData: investmentData,
-					retries: 0
+					investmentRetries: 0
 				});
 			}.bind(this),
 			error: function () {
-				if (retries <= 3) this.getInvestorInvestments(id, retries);
+				if (investmentRetries <= 3) this.getInvestorInvestments(id, investmentRetries);
 			}.bind(this)
 		});
+	},
+	onProfileDataChange: function () {
+		this.getInvestorProfile(this.props.selectedInvestorId, this.state.profileRetries);
+	},
+	onInvestmentDataChange: function () {
+		this.getInvestorInvestments(this.props.selectedInvestorId, this.state.investmentRetries);
 	},
 	onDetailViewChange: function (detailViewKeyword) {
 		this.setState({ detailView: detailViewKeyword });
@@ -470,11 +478,16 @@ var InvestDetailView = React.createClass({
 		if (this.state.detailView === 'PROFILE') {
 			view = React.createElement(InvestProfileDetails, {
 				profileData: this.state.profileData,
+				profileDataChange: this.onProfileDataChange,
+				modalViewChange: this.props.modalViewChange,
 				mainViewChange: this.props.mainViewChange,
 				sendEmailVerification: this.sendEmailVerification });
 		} else if (this.state.detailView === 'INVESTMENT') {
 			view = React.createElement(InvestInvestmentsDetails, {
+				selectedInvestorId: this.props.selectedInvestorId,
 				investmentData: this.state.investmentData,
+				investmentDataChange: this.onInvestmentDataChange,
+				modalViewChange: this.props.modalViewChange,
 				mainViewChange: this.props.mainViewChange });
 		}
 		return React.createElement(
@@ -537,6 +550,21 @@ var InvestDetailView = React.createClass({
 var InvestInvestmentsDetails = React.createClass({
 	displayName: "InvestInvestmentsDetails",
 
+	getInitialState: function () {
+		return {
+			investmentView: undefined,
+			selectedTransactionId: undefined
+		};
+	},
+	onInvestmentViewChange: function (investmentViewKeyword) {
+		this.setState({ investmentView: investmentViewKeyword });
+	},
+	onTransactionSelect: function (id) {
+		this.setState({
+			selectedTransactionId: id,
+			investmentView: 'DETAILS'
+		});
+	},
 	render: function () {
 		var investmentView;
 		if (this.props.investmentData === undefined) {
@@ -563,9 +591,31 @@ var InvestInvestmentsDetails = React.createClass({
 				)
 			);
 		} else {
-			investmentView = React.createElement(InvestAccountDetails, {
-				investmentData: this.props.investmentData,
-				mainViewChange: this.props.mainViewChange });
+			switch (this.state.investmentView) {
+				case 'TRANSACTION':
+					investmentView = React.createElement(InvestTransactionForm, {
+						selectedInvestorId: this.props.selectedInvestorId,
+						investmentDataChange: this.props.investmentDataChange,
+						investmentViewChange: this.onInvestmentViewChange,
+						modalViewChange: this.props.modalViewChange });
+					break;
+
+				case 'DETAILS':
+					investmentView = React.createElement(InvestTransactionDetails, {
+						selectedTransactionId: this.state.selectedTransactionId,
+						modalViewChange: this.props.modalViewChange,
+						investmentDataChange: this.props.investmentDataChange,
+						investmentViewChange: this.onInvestmentViewChange });
+					break;
+
+				default:
+					investmentView = React.createElement(InvestAccountDetails, {
+						investmentData: this.props.investmentData,
+						investmentViewChange: this.onInvestmentViewChange,
+						transactionSelect: this.onTransactionSelect,
+						mainViewChange: this.props.mainViewChange });
+					break;
+			}
 		}
 		return React.createElement(
 			"div",
@@ -623,31 +673,31 @@ var InvestAccountDetails = React.createClass({
 
 		if (this.props.investmentData.length > 0) {
 			SOA = this.props.investmentData.map(function (account, index) {
-				account.transaction_date = moment(account.transaction_date).format('DD MMM YYYY');
+				account.transactionDate = moment(account.transactionDate).format('DD MMM YYYY');
 				account.amount = accounting.formatNumber(account.amount, 2);
 				account.runningBalance = accounting.formatNumber(account.runningBalance, 2);
 				return React.createElement(
 					"tr",
-					{ key: index },
+					{ key: index, className: "clickable-row", onClick: this.props.transactionSelect.bind(null, account.id) },
 					React.createElement(
 						"td",
 						{ className: "text-center" },
-						account.transaction_date
+						account.transactionDate
+					),
+					React.createElement(
+						"td",
+						{ className: "text-center" },
+						account.transaction_type_id
 					),
 					React.createElement(
 						"td",
 						{ className: "text-right" },
-						account.transaction_type === 'DP' ? account.amount : null
+						account.transaction_type.account_type === 'DR' ? account.amount : null
 					),
 					React.createElement(
 						"td",
 						{ className: "text-right" },
-						account.transaction_type === 'WD' ? account.amount : null
-					),
-					React.createElement(
-						"td",
-						{ className: "text-right" },
-						account.transaction_type === 'DV' ? account.amount : null
+						account.transaction_type.account_type === 'CR' ? account.amount : null
 					),
 					React.createElement(
 						"td",
@@ -672,13 +722,8 @@ var InvestAccountDetails = React.createClass({
 						{ className: "btn-group" },
 						React.createElement(
 							"button",
-							{ type: "button", className: "btn btn-default btn-xs", onClick: this.props.mainViewChange.bind(null, 'DEPOSIT') },
-							"Deposit"
-						),
-						React.createElement(
-							"button",
-							{ type: "button", className: "btn btn-default btn-xs", onClick: this.props.mainViewChange.bind(null, 'WITHDRAW') },
-							"Withdraw"
+							{ type: "button", className: "btn btn-link btn-xs", onClick: this.props.investmentViewChange.bind(null, 'TRANSACTION') },
+							"Add New Transaction"
 						)
 					)
 				)
@@ -703,17 +748,17 @@ var InvestAccountDetails = React.createClass({
 							React.createElement(
 								"th",
 								{ className: "text-center" },
-								"Deposit"
+								"TC"
 							),
 							React.createElement(
 								"th",
 								{ className: "text-center" },
-								"Withdraw"
+								"Debit"
 							),
 							React.createElement(
 								"th",
 								{ className: "text-center" },
-								"Dividend"
+								"Credit"
 							),
 							React.createElement(
 								"th",
@@ -733,19 +778,384 @@ var InvestAccountDetails = React.createClass({
 	}
 });
 
-/*=====  End of Invest Account Details  ======*/
+/*----------  Invest Transaction Form  ----------*/
 
-/*==============================================
-=            Invest Profile Details            =
-==============================================*/
+var InvestTransactionForm = React.createClass({
+	displayName: "InvestTransactionForm",
 
-var InvestProfileDetails = React.createClass({
-	displayName: "InvestProfileDetails",
+	getInitialState: function () {
+		return {
+			transactionTypes: undefined,
+			transactionDate: moment().format('MM/DD/YYYY'),
+			amount: '0.00',
+			transaction_type_id: '',
+			notes: ''
+		};
+	},
+	componentWillMount: function () {
+		this.getTransactionTypes();
+	},
+	componentDidMount: function () {
+		var self = this;
+		$("#datepicker-transactionDate").datepicker({
+			autoclose: true
+		}).on('changeDate', function (e) {
+			self.setState({ transactionDate: moment(e.date).format('MM/DD/YYYY') });
+		});
+	},
+	getTransactionTypes: function () {
+		$.ajax({
+			url: '/api/transaction/getTransactionTypes',
+			type: 'POST',
+			dataType: 'json',
+			cache: false,
+			success: function (types) {
+				this.setState({ transactionTypes: types });
+			}.bind(this)
+		});
+	},
+	handleChange: function (name, e) {
+		var change = {};
+		change[name] = e.target.value;
+		this.setState(change);
+	},
+	handleSubmit: function (e) {
+		e.preventDefault();
 
+		this.props.modalViewChange('TRANSACTION-SAVING');
+		$("#InvestMessageContainerModal").modal();
+		$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = false;
+		$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = 'static';
+
+		var postData = {
+			id: this.props.selectedInvestorId,
+			transactionDate: this.state.transactionDate,
+			amount: accounting.unformat(this.state.amount),
+			transaction_type_id: this.state.transaction_type_id,
+			notes: this.state.notes
+		};
+
+		$.each(postData, function (key, value) {
+			$("#fg-" + key).removeClass('has-error');
+			$("#input-" + key).popover('destroy');
+		});
+
+		$.ajax({
+			url: 'api/transaction/saveTransaction',
+			type: 'POST',
+			data: postData,
+			success: function (response) {
+				this.props.modalViewChange('TRANSACTION-SUCCESS');
+				this.props.investmentDataChange();
+				this.props.investmentViewChange(undefined);
+				$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+				$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+			}.bind(this),
+			error: function (response) {
+				if (response.status === 422) {
+					$("#InvestMessageContainerModal").modal('hide');
+					$.each(response.responseJSON, function (key, value) {
+						$("#fg-" + key).addClass('has-error');
+						$("#input-" + key).popover({ trigger: 'hover', content: value, placement: 'top' });
+					});
+				} else {
+					this.props.modalViewChange('TRANSACTION-ERROR');
+					$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+					$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+				}
+			}.bind(this)
+		});
+	},
+	amountBlurred: function () {
+		this.setState({ amount: accounting.formatNumber(this.state.amount, 2) });
+	},
+	amountFocused: function () {
+		this.setState({ amount: accounting.unformat(this.state.amount) });
+	},
 	render: function () {
-		var profileView;
-		if (this.props.profileData === undefined) {
-			profileView = React.createElement(
+		var transactionTypeOptions;
+		if (this.state.transactionTypes !== undefined) {
+			transactionTypeOptions = this.state.transactionTypes.map(function (type, index) {
+				return React.createElement(
+					"option",
+					{ key: index, value: type.id },
+					type.description
+				);
+			}.bind(this));
+		}
+		return React.createElement(
+			"div",
+			{ className: "panel panel-default" },
+			React.createElement(
+				"div",
+				{ className: "panel-heading" },
+				"Add New Transaction"
+			),
+			React.createElement(
+				"div",
+				{ className: "panel-body" },
+				React.createElement(
+					"div",
+					{ className: "row" },
+					React.createElement(
+						"div",
+						{ className: "col-md-6 col-md-offset-3" },
+						React.createElement(
+							"form",
+							{ onSubmit: this.handleSubmit },
+							React.createElement(
+								"div",
+								{ className: "form-group", id: "fg-transactionDate" },
+								React.createElement(
+									"label",
+									{ className: "control-label", htmlFor: "input-transactionDate" },
+									"Transaction Date"
+								),
+								React.createElement(
+									"div",
+									{ className: "input-group date", id: "datepicker-transactionDate" },
+									React.createElement("input", {
+										type: "text",
+										className: "form-control",
+										id: "input-transactionDate",
+										value: this.state.transactionDate,
+										onChange: this.handleChange.bind(null, 'transactionDate') }),
+									React.createElement(
+										"span",
+										{ className: "input-group-addon" },
+										React.createElement("span", { className: "glyphicon glyphicon-calendar" })
+									)
+								)
+							),
+							React.createElement(
+								"div",
+								{ className: "form-group", id: "fg-amount" },
+								React.createElement(
+									"label",
+									{ className: "control-label", htmlFor: "input-amount" },
+									"Amount"
+								),
+								React.createElement(
+									"div",
+									{ className: "input-group" },
+									React.createElement(
+										"span",
+										{ className: "input-group-addon" },
+										React.createElement(
+											"span",
+											null,
+											"Php"
+										)
+									),
+									React.createElement("input", {
+										type: "text",
+										className: "form-control text-right",
+										id: "input-amount",
+										value: this.state.amount,
+										onFocus: this.amountFocused,
+										onBlur: this.amountBlurred,
+										onChange: this.handleChange.bind(null, 'amount') })
+								)
+							),
+							React.createElement(
+								"div",
+								{ className: "form-group", id: "fg-transaction_type_id" },
+								React.createElement(
+									"label",
+									{ className: "control-label", htmlFor: "input-transaction_type_id" },
+									"Transaction Type"
+								),
+								React.createElement(
+									"select",
+									{
+										className: "form-control",
+										id: "input-transaction_type_id",
+										value: this.state.transaction_type_id,
+										disabled: this.state.transactionTypes === undefined,
+										onChange: this.handleChange.bind(null, 'transaction_type_id') },
+									React.createElement(
+										"option",
+										{ value: "", disabled: true },
+										"Please select..."
+									),
+									transactionTypeOptions
+								)
+							),
+							React.createElement(
+								"div",
+								{ className: "form-group" },
+								React.createElement(
+									"label",
+									null,
+									"Notes/Reason ",
+									React.createElement(
+										"small",
+										null,
+										"(optional)"
+									)
+								),
+								React.createElement("textarea", {
+									className: "form-control",
+									rows: "5",
+									value: this.state.notes,
+									onChange: this.handleChange.bind(null, 'notes') })
+							),
+							React.createElement(
+								"div",
+								{ className: "form-group" },
+								React.createElement(
+									"div",
+									{ className: "pull-right" },
+									React.createElement(
+										"div",
+										{ className: "btn-group" },
+										React.createElement(
+											"button",
+											{ type: "button", className: "btn btn-default", onClick: this.props.investmentViewChange.bind(null, undefined) },
+											"Cancel"
+										),
+										React.createElement(
+											"button",
+											{ type: "submit", className: "btn btn-primary" },
+											"Save Transaction"
+										)
+									)
+								)
+							)
+						)
+					)
+				)
+			)
+		);
+	}
+});
+
+/*----------  Invest View Transaction Details  ----------*/
+
+var InvestTransactionDetails = React.createClass({
+	displayName: "InvestTransactionDetails",
+
+	getInitialState: function () {
+		return {
+			transactionTypes: undefined,
+			transactionDetails: undefined,
+			transactionDate: moment().format('MM/DD/YYYY'),
+			amount: '0.00',
+			transaction_type_id: '',
+			notes: '',
+			editMode: false
+
+		};
+	},
+	componentWillMount: function () {
+		this.getTransactionDetails();
+		this.getTransactionTypes();
+	},
+	getTransactionDetails: function () {
+		$.ajax({
+			url: '/api/transaction/getTransactionDetails',
+			type: 'POST',
+			data: { id: this.props.selectedTransactionId },
+			dataType: 'json',
+			cache: false,
+			success: function (transaction) {
+				this.setState({
+					transactionDetails: transaction,
+					transactionDate: moment(transaction.transactionDate).format("MM/DD/YYYY"),
+					amount: accounting.formatNumber(transaction.amount, 2),
+					transaction_type_id: transaction.transaction_type_id,
+					notes: transaction.notes
+				});
+			}.bind(this)
+		});
+	},
+	getTransactionTypes: function () {
+		$.ajax({
+			url: '/api/transaction/getTransactionTypes',
+			type: 'POST',
+			dataType: 'json',
+			cache: false,
+			success: function (types) {
+				this.setState({ transactionTypes: types });
+			}.bind(this)
+		});
+	},
+	handleChange: function (name, e) {
+		var change = {};
+		change[name] = e.target.value;
+		this.setState(change);
+
+		var transactionDetails = this.state.transactionDetails;
+
+		if (this.state.transactionDate == transactionDetails.transactionDate && this.state.amount == transactionDetails.amount && this.state.transaction_type_id == transactionDetails.transaction_type_id && this.state.notes == transactionDetails.notes) this.setState({ editMode: false });else this.setState({ editMode: true });
+	},
+	handleSubmit: function (e) {
+		e.preventDefault();
+
+		this.props.modalViewChange('UPDATE-TRANSACTION-SAVING');
+		$("#InvestMessageContainerModal").modal();
+		$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = false;
+		$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = 'static';
+
+		var postData = {
+			id: this.props.selectedTransactionId,
+			transactionDate: this.state.transactionDate,
+			amount: accounting.unformat(this.state.amount),
+			transaction_type_id: this.state.transaction_type_id,
+			notes: this.state.notes
+		};
+
+		$.each(postData, function (key, value) {
+			$("#fg-" + key).removeClass('has-error');
+			$("#input-" + key).popover('destroy');
+		});
+
+		$.ajax({
+			url: 'api/transaction/updateTransaction',
+			type: 'POST',
+			data: postData,
+			success: function (response) {
+				this.props.modalViewChange('UPDATE-TRANSACTION-SUCCESS');
+				this.props.investmentDataChange();
+				this.props.investmentViewChange(undefined);
+				$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+				$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+			}.bind(this),
+			error: function (response) {
+				if (response.status === 422) {
+					$("#InvestMessageContainerModal").modal('hide');
+					$.each(response.responseJSON, function (key, value) {
+						$("#fg-" + key).addClass('has-error');
+						$("#input-" + key).popover({ trigger: 'hover', content: value, placement: 'top' });
+					});
+				} else {
+					this.props.modalViewChange('UPDATE-TRANSACTION-ERROR');
+					$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+					$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+				}
+			}.bind(this)
+		});
+	},
+	amountBlurred: function () {
+		this.setState({ amount: accounting.formatNumber(this.state.amount, 2) });
+	},
+	amountFocused: function () {
+		this.setState({ amount: accounting.unformat(this.state.amount) });
+	},
+	render: function () {
+		var transactionTypeOptions;
+		if (this.state.transactionTypes !== undefined) {
+			transactionTypeOptions = this.state.transactionTypes.map(function (type, index) {
+				return React.createElement(
+					"option",
+					{ key: index, value: type.id },
+					type.description
+				);
+			}.bind(this));
+		}
+		var view;
+		if (this.state.transactionDetails === undefined) {
+			view = React.createElement(
 				"div",
 				{ className: "panel panel-default" },
 				React.createElement(
@@ -768,9 +1178,226 @@ var InvestProfileDetails = React.createClass({
 				)
 			);
 		} else {
-			profileView = React.createElement(ProfileUserCredentials, {
-				profileData: this.props.profileData,
-				sendEmailVerification: this.props.sendEmailVerification });
+			view = React.createElement(
+				"div",
+				{ className: "row" },
+				React.createElement(
+					"div",
+					{ className: "col-md-6 col-md-offset-3" },
+					React.createElement(
+						"form",
+						{ onSubmit: this.handleSubmit },
+						React.createElement(
+							"div",
+							{ className: "form-group", id: "fg-transactionDate" },
+							React.createElement(
+								"label",
+								{ className: "control-label", htmlFor: "input-transactionDate" },
+								"Transaction Date"
+							),
+							React.createElement(
+								"div",
+								{ className: "input-group date", id: "datepicker-transactionDate" },
+								React.createElement("input", {
+									type: "text",
+									className: "form-control",
+									id: "input-transactionDate",
+									value: this.state.transactionDate,
+									onChange: this.handleChange.bind(null, 'transactionDate') }),
+								React.createElement(
+									"span",
+									{ className: "input-group-addon" },
+									React.createElement("span", { className: "glyphicon glyphicon-calendar" })
+								)
+							)
+						),
+						React.createElement(
+							"div",
+							{ className: "form-group", id: "fg-amount" },
+							React.createElement(
+								"label",
+								{ className: "control-label", htmlFor: "input-amount" },
+								"Amount"
+							),
+							React.createElement(
+								"div",
+								{ className: "input-group" },
+								React.createElement(
+									"span",
+									{ className: "input-group-addon" },
+									React.createElement(
+										"span",
+										null,
+										"Php"
+									)
+								),
+								React.createElement("input", {
+									type: "text",
+									className: "form-control text-right",
+									id: "input-amount",
+									value: this.state.amount,
+									onFocus: this.amountFocused,
+									onBlur: this.amountBlurred,
+									onChange: this.handleChange.bind(null, 'amount') })
+							)
+						),
+						React.createElement(
+							"div",
+							{ className: "form-group", id: "fg-transaction_type_id" },
+							React.createElement(
+								"label",
+								{ className: "control-label", htmlFor: "input-transaction_type_id" },
+								"Transaction Type"
+							),
+							React.createElement(
+								"select",
+								{
+									className: "form-control",
+									id: "input-transaction_type_id",
+									value: this.state.transaction_type_id,
+									disabled: this.state.transactionTypes === undefined,
+									onChange: this.handleChange.bind(null, 'transaction_type_id') },
+								React.createElement(
+									"option",
+									{ value: "", disabled: true },
+									"Please select..."
+								),
+								transactionTypeOptions
+							)
+						),
+						React.createElement(
+							"div",
+							{ className: "form-group" },
+							React.createElement(
+								"label",
+								null,
+								"Notes/Reason ",
+								React.createElement(
+									"small",
+									null,
+									"(optional)"
+								)
+							),
+							React.createElement("textarea", {
+								className: "form-control",
+								rows: "5",
+								value: this.state.notes,
+								onChange: this.handleChange.bind(null, 'notes') })
+						),
+						React.createElement(
+							"div",
+							{ className: "form-group" },
+							React.createElement(
+								"div",
+								{ className: "pull-right" },
+								React.createElement(
+									"div",
+									{ className: "btn-group" },
+									React.createElement(
+										"button",
+										{ type: "button", className: "btn btn-default", onClick: this.props.investmentViewChange.bind(null, undefined) },
+										"Cancel"
+									),
+									React.createElement(
+										"button",
+										{
+											type: "submit",
+											className: "btn btn-primary",
+											disabled: !this.state.editMode },
+										"Update Transaction"
+									)
+								)
+							)
+						)
+					)
+				)
+			);
+		}
+		return React.createElement(
+			"div",
+			{ className: "panel panel-default" },
+			React.createElement(
+				"div",
+				{ className: "panel-heading" },
+				"Transaction Details",
+				React.createElement(
+					"div",
+					{ className: "pull-right" },
+					React.createElement(
+						"button",
+						{ className: "btn btn-link btn-xs" },
+						"Edit Details"
+					)
+				)
+			),
+			React.createElement(
+				"div",
+				{ className: "panel-body" },
+				view
+			)
+		);
+	}
+});
+
+/*=====  End of Invest Account Details  ======*/
+
+/*==============================================
+=            Invest Profile Details            =
+==============================================*/
+
+var InvestProfileDetails = React.createClass({
+	displayName: "InvestProfileDetails",
+
+	getInitialState: function () {
+		return {
+			profileView: undefined
+		};
+	},
+	onProfileViewChange: function (profileViewKeyword) {
+		this.setState({ profileView: profileViewKeyword });
+	},
+	render: function () {
+		var view;
+		if (this.props.profileData === undefined) {
+			view = React.createElement(
+				"div",
+				{ className: "panel panel-default" },
+				React.createElement(
+					"div",
+					{ className: "panel-body" },
+					React.createElement(
+						"div",
+						{ className: "row" },
+						React.createElement(
+							"div",
+							{ className: "col-md-12" },
+							React.createElement(
+								"div",
+								{ className: "text-center" },
+								React.createElement("i", { className: "fa fa-circle-o-notch fa-spin fa-fw" }),
+								" Loading Data..."
+							)
+						)
+					)
+				)
+			);
+		} else {
+			switch (this.state.profileView) {
+				case 'PROFILE-MANAGE':
+					view = React.createElement(ManageProfileUserCredentials, {
+						profileData: this.props.profileData,
+						profileDataChange: this.props.profileDataChange,
+						modalViewChange: this.props.modalViewChange,
+						profileViewChange: this.onProfileViewChange });
+					break;
+
+				default:
+					view = React.createElement(ProfileUserCredentials, {
+						profileData: this.props.profileData,
+						profileViewChange: this.onProfileViewChange,
+						sendEmailVerification: this.props.sendEmailVerification });
+					break;
+			}
 		}
 		return React.createElement(
 			"div",
@@ -802,7 +1429,7 @@ var InvestProfileDetails = React.createClass({
 					React.createElement(
 						"div",
 						{ className: "col-md-12" },
-						profileView
+						view
 					)
 				)
 			)
@@ -828,13 +1455,11 @@ var ProfileUserCredentials = React.createClass({
 		var user = this.props.profileData.user;
 		var investor = this.props.profileData.investor;
 		investor.fullName = investor.middleName !== null ? investor.firstName + " " + investor.middleName + " " + investor.lastName : investor.firstName + " " + investor.lastName;
-
 		var sendEmailButton = user.is_verified ? null : React.createElement(
 			"button",
 			{ type: "button", className: "btn btn-link btn-xs", onClick: this.props.sendEmailVerification.bind(null, investor.id) },
 			user.verification_code ? "Send Email Verification" : "Resend Email Verification"
 		);
-
 		return React.createElement(
 			"div",
 			{ className: "panel panel-default" },
@@ -845,6 +1470,11 @@ var ProfileUserCredentials = React.createClass({
 				React.createElement(
 					"div",
 					{ className: "pull-right" },
+					React.createElement(
+						"button",
+						{ type: "button", className: "btn btn-link btn-xs", onClick: this.props.profileViewChange.bind(null, 'PROFILE-MANAGE') },
+						"Manage User Credentials"
+					),
 					sendEmailButton
 				)
 			),
@@ -936,49 +1566,40 @@ var ProfileUserCredentials = React.createClass({
 	}
 });
 
-/*=====  End of Invest Profile Details  ======*/
+/*----------  Manage Profile User Credentials  ----------*/
 
-/*======================================
-=            Invest Deposit            =
-======================================*/
-
-var InvestDepositForm = React.createClass({
-	displayName: "InvestDepositForm",
+var ManageProfileUserCredentials = React.createClass({
+	displayName: "ManageProfileUserCredentials",
 
 	getInitialState: function () {
 		return {
-			depositDate: moment().format('MM/DD/YYYY'),
-			depositAmount: "0.00",
-			notes: ''
+			email: '',
+			username: '',
+			password: '',
+			confirmPassword: ''
 		};
-	},
-	componentDidMount: function () {
-		var self = this;
-		$("#datetimepicker-depositDate").datepicker({
-			autoclose: true
-		}).on('changeDate', function (e) {
-			self.setState({ depositDate: e.date });
-		});
 	},
 	handleChange: function (name, e) {
 		var change = {};
 		change[name] = e.target.value;
 		this.setState(change);
 	},
-	handleSubmit: function (e) {
+	handleSubmitEmail: function (e) {
 		e.preventDefault();
 
-		this.props.modalViewChange('DEPOSIT-SAVING');
+		this.props.modalViewChange('CHANGE-EMAIL-SAVING');
 		$("#InvestMessageContainerModal").modal();
 		$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = false;
 		$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = 'static';
 
 		var postData = {
-			id: this.props.selectedInvestorId,
-			depositDate: this.state.depositDate,
-			depositAmount: accounting.unformat(this.state.depositAmount),
-			notes: this.state.notes
+			id: this.props.profileData.user.id,
+			email: this.state.email.trim()
 		};
+
+		this.setState({
+			email: postData.email
+		});
 
 		$.each(postData, function (key, value) {
 			$("#fg-" + key).removeClass('has-error');
@@ -986,13 +1607,23 @@ var InvestDepositForm = React.createClass({
 		});
 
 		$.ajax({
-			url: 'api/transaction/deposit',
+			url: '/api/investment/updateEmailAddress',
 			type: 'POST',
 			data: postData,
 			success: function (response) {
 				console.log(response.status);
-				this.props.modalViewChange('DEPOSIT-SUCCESS');
-				this.props.mainViewChange('DETAILS');
+				if (response.status === 'success') {
+					this.props.profileDataChange();
+					this.props.modalViewChange('CHANGE-EMAIL-SAVED');
+					this.setState({
+						email: '',
+						username: '',
+						password: '',
+						confirmPassword: ''
+					});
+				} else if (response.status === 'unchanged') {
+					this.props.modalViewChange('CHANGE-EMAIL-UNCHANGED');
+				}
 				$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
 				$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
 			}.bind(this),
@@ -1004,348 +1635,292 @@ var InvestDepositForm = React.createClass({
 						$("#input-" + key).popover({ trigger: 'hover', content: value, placement: 'top' });
 					});
 				} else {
-					this.props.modalViewChange('DEPOSIT-ERROR');
+					this.props.modalViewChange('CHANGE-EMAIL-ERROR');
 					$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
 					$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
 				}
 			}.bind(this)
 		});
 	},
-	amountBlurred: function () {
-		this.setState({ depositAmount: accounting.formatNumber(this.state.depositAmount, 2) });
+	handleSubmitUsername: function (e) {
+		e.preventDefault();
+
+		this.props.modalViewChange('CHANGE-USERNAME-SAVING');
+		$("#InvestMessageContainerModal").modal();
+		$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = false;
+		$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = 'static';
+
+		var postData = {
+			id: this.props.profileData.user.id,
+			username: this.state.username.trim()
+		};
+
+		this.setState({
+			username: postData.username
+		});
+
+		$.each(postData, function (key, value) {
+			$("#fg-" + key).removeClass('has-error');
+			$("#input-" + key).popover('destroy');
+		});
+
+		$.ajax({
+			url: '/api/investment/updateUsername',
+			type: 'POST',
+			data: postData,
+			success: function (response) {
+				console.log(response.status);
+				if (response.status === 'success') {
+					this.props.profileDataChange();
+					this.props.modalViewChange('CHANGE-USERNAME-SAVED');
+					this.setState({
+						email: '',
+						username: '',
+						password: '',
+						confirmPassword: ''
+					});
+				} else if (response.status === 'unchanged') {
+					this.props.modalViewChange('CHANGE-USERNAME-UNCHANGED');
+				}
+				$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+				$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+			}.bind(this),
+			error: function (response) {
+				if (response.status === 422) {
+					$("#InvestMessageContainerModal").modal('hide');
+					$.each(response.responseJSON, function (key, value) {
+						$("#fg-" + key).addClass('has-error');
+						$("#input-" + key).popover({ trigger: 'hover', content: value, placement: 'top' });
+					});
+				} else {
+					this.props.modalViewChange('CHANGE-USERNAME-ERROR');
+					$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+					$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+				}
+			}.bind(this)
+		});
 	},
-	amountFocused: function () {
-		this.setState({ depositAmount: accounting.unformat(this.state.depositAmount) });
+	handleSubmitPassword: function (e) {
+		e.preventDefault();
+
+		this.props.modalViewChange('CHANGE-PASSWORD-SAVING');
+		$("#InvestMessageContainerModal").modal();
+		$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = false;
+		$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = 'static';
+
+		var postData = {
+			id: this.props.profileData.user.id,
+			password: this.state.password,
+			confirmPassword: this.state.confirmPassword
+		};
+
+		$.each(postData, function (key, value) {
+			$("#fg-" + key).removeClass('has-error');
+			$("#input-" + key).popover('destroy');
+		});
+
+		$.ajax({
+			url: '/api/investment/updatePassword',
+			type: 'POST',
+			data: postData,
+			success: function (response) {
+				console.log(response.status);
+				if (response.status === 'success') {
+					this.props.profileDataChange();
+					this.props.modalViewChange('CHANGE-PASSWORD-SAVED');
+					this.setState({
+						email: '',
+						username: '',
+						password: '',
+						confirmPassword: ''
+					});
+				}
+				$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+				$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+			}.bind(this),
+			error: function (response) {
+				if (response.status === 422) {
+					$("#InvestMessageContainerModal").modal('hide');
+					$.each(response.responseJSON, function (key, value) {
+						$("#fg-" + key).addClass('has-error');
+						$("#input-" + key).popover({ trigger: 'hover', content: value, placement: 'top' });
+					});
+				} else {
+					this.props.modalViewChange('CHANGE-PASSWORD-ERROR');
+					$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
+					$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
+				}
+			}.bind(this)
+		});
 	},
 	render: function () {
 		return React.createElement(
 			"div",
-			{ className: "col-md-4 col-md-offset-4" },
+			{ className: "panel panel-default" },
 			React.createElement(
 				"div",
-				{ className: "panel panel-default" },
+				{ className: "panel-heading" },
+				"Manage User Credentials",
 				React.createElement(
 					"div",
-					{ className: "panel-heading" },
-					"Deposit Investment"
-				),
-				React.createElement(
-					"div",
-					{ className: "panel-body" },
+					{ className: "pull-right" },
 					React.createElement(
-						"div",
-						{ className: "row" },
-						React.createElement(
-							"div",
-							{ className: "col-md-12" },
-							React.createElement(
-								"form",
-								{ onSubmit: this.handleSubmit },
-								React.createElement(
-									"div",
-									{ className: "form-group has-feedback", id: "fg-depositDate" },
-									React.createElement(
-										"label",
-										{ className: "control-label", htmlFor: "input-depositDate" },
-										"Date Deposit"
-									),
-									React.createElement(
-										"div",
-										{ className: "input-group date", id: "datetimepicker-depositDate" },
-										React.createElement("input", {
-											type: "text",
-											id: "input-depositDate",
-											className: "form-control",
-											size: "16",
-											value: this.state.depositDate,
-											onChange: this.handleChange.bind(null, 'depositDate') }),
-										React.createElement(
-											"span",
-											{ className: "input-group-addon" },
-											React.createElement("span", { className: "glyphicon glyphicon-calendar" })
-										)
-									)
-								),
-								React.createElement(
-									"div",
-									{ className: "form-group", id: "fg-depositAmount" },
-									React.createElement(
-										"label",
-										{ className: "control-label", htmlFor: "input-depositAmount" },
-										"Amount Deposit"
-									),
-									React.createElement(
-										"div",
-										{ className: "input-group" },
-										React.createElement(
-											"span",
-											{ className: "input-group-addon" },
-											React.createElement(
-												"span",
-												null,
-												"Php"
-											)
-										),
-										React.createElement("input", {
-											type: "text",
-											id: "input-depositAmount",
-											className: "form-control text-right",
-											value: this.state.depositAmount,
-											onFocus: this.amountFocused,
-											onBlur: this.amountBlurred,
-											onChange: this.handleChange.bind(null, 'depositAmount') })
-									)
-								),
-								React.createElement(
-									"div",
-									{ className: "form-group" },
-									React.createElement(
-										"label",
-										null,
-										"Notes/Reason ",
-										React.createElement(
-											"small",
-											null,
-											"(optional)"
-										)
-									),
-									React.createElement("textarea", {
-										className: "form-control",
-										rows: "5",
-										value: this.state.notes,
-										onChange: this.handleChange.bind(null, 'notes') })
-								),
-								React.createElement(
-									"div",
-									{ className: "form-group" },
-									React.createElement(
-										"div",
-										{ className: "pull-right" },
-										React.createElement(
-											"div",
-											{ className: "btn-group" },
-											React.createElement(
-												"button",
-												{ type: "button", className: "btn btn-default", onClick: this.props.mainViewChange.bind(null, 'DETAILS') },
-												"Cancel"
-											),
-											React.createElement(
-												"button",
-												{ type: "submit", className: "btn btn-primary" },
-												"Add Deposit"
-											)
-										)
-									)
-								)
-							)
-						)
+						"button",
+						{ type: "button", className: "close", onClick: this.props.profileViewChange.bind(null, undefined) },
+						"×"
 					)
 				)
-			)
-		);
-	}
-});
-
-/*=====  End of Invest Deposit  ======*/
-
-/*=======================================
-=            Invest Withdraw            =
-=======================================*/
-
-var InvestWithdrawForm = React.createClass({
-	displayName: "InvestWithdrawForm",
-
-	getInitialState: function () {
-		return {
-			withdrawDate: moment().format('MM/DD/YYYY'),
-			withdrawAmount: "0.00",
-			notes: ''
-		};
-	},
-	componentDidMount: function () {
-		var self = this;
-		$("#datetimepicker-withdrawDate").datepicker({
-			autoclose: true
-		}).on('changeDate', function (e) {
-			self.setState({ withdrawDate: e.date });
-		});
-	},
-	handleChange: function (name, e) {
-		var change = {};
-		change[name] = e.target.value;
-		this.setState(change);
-	},
-	handleSubmit: function (e) {
-		e.preventDefault();
-
-		this.props.modalViewChange('WITHDRAW-SAVING');
-		$("#InvestMessageContainerModal").modal();
-		$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = false;
-		$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = 'static';
-
-		var postData = {
-			id: this.props.selectedInvestorId,
-			withdrawDate: this.state.withdrawDate,
-			withdrawAmount: accounting.unformat(this.state.withdrawAmount),
-			notes: this.state.notes
-		};
-
-		$.each(postData, function (key, value) {
-			$("#fg-" + key).removeClass('has-error');
-			$("#input-" + key).popover('destroy');
-		});
-
-		$.ajax({
-			url: 'api/transaction/withdraw',
-			type: 'POST',
-			data: postData,
-			success: function (response) {
-				console.log(response.status);
-				this.props.modalViewChange('WITHDRAW-SUCCESS');
-				this.props.mainViewChange('DETAILS');
-				$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
-				$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
-			}.bind(this),
-			error: function (response) {
-				if (response.status === 422) {
-					$("#InvestMessageContainerModal").modal('hide');
-					$.each(response.responseJSON, function (key, value) {
-						$("#fg-" + key).addClass('has-error');
-						$("#input-" + key).popover({ trigger: 'hover', content: value, placement: 'top' });
-					});
-				} else {
-					this.props.modalViewChange('WITHDRAW-ERROR');
-					$("#InvestMessageContainerModal").data('bs.modal').options.keyboard = true;
-					$("#InvestMessageContainerModal").data('bs.modal').options.backdrop = true;
-				}
-			}.bind(this)
-		});
-	},
-	amountBlurred: function () {
-		this.setState({ withdrawAmount: accounting.formatNumber(this.state.withdrawAmount, 2) });
-	},
-	amountFocused: function () {
-		this.setState({ withdrawAmount: accounting.unformat(this.state.withdrawAmount) });
-	},
-	render: function () {
-		return React.createElement(
-			"div",
-			{ className: "col-md-4 col-md-offset-4" },
+			),
 			React.createElement(
 				"div",
-				{ className: "panel panel-default" },
+				{ className: "panel-body" },
 				React.createElement(
 					"div",
-					{ className: "panel-heading" },
-					"Withdraw Investment"
+					{ className: "page-header" },
+					React.createElement(
+						"h2",
+						null,
+						"Edit E-mail Address"
+					)
 				),
 				React.createElement(
 					"div",
-					{ className: "panel-body" },
+					{ className: "row" },
 					React.createElement(
 						"div",
-						{ className: "row" },
+						{ className: "col-md-6" },
 						React.createElement(
 							"form",
-							{ onSubmit: this.handleSubmit },
+							{ onSubmit: this.handleSubmitEmail },
 							React.createElement(
 								"div",
-								{ className: "col-md-12" },
+								{ className: "form-group", id: "fg-email" },
 								React.createElement(
-									"div",
-									{ className: "form-group has-feedback", id: "fg-withdrawDate" },
-									React.createElement(
-										"label",
-										{ className: "control-label", htmlFor: "input-withdrawDate" },
-										"Date Withdraw"
-									),
-									React.createElement(
-										"div",
-										{ className: "input-group date", id: "datetimepicker-withdrawDate" },
-										React.createElement("input", {
-											type: "text",
-											id: "input-withdrawDate",
-											className: "form-control",
-											size: "16",
-											value: this.state.withdrawDate,
-											onChange: this.handleChange.bind(null, 'withdrawDate') }),
-										React.createElement(
-											"span",
-											{ className: "input-group-addon" },
-											React.createElement("span", { className: "glyphicon glyphicon-calendar" })
-										)
-									)
+									"label",
+									{ className: "control-label", htmlFor: "input-email" },
+									"New Email Address"
 								),
+								React.createElement("input", {
+									type: "text",
+									className: "form-control",
+									id: "input-email",
+									value: this.state.email,
+									placeholder: this.props.profileData.user.email,
+									onChange: this.handleChange.bind(null, 'email') })
+							),
+							React.createElement(
+								"div",
+								{ className: "form-group" },
 								React.createElement(
-									"div",
-									{ className: "form-group", id: "fg-withdrawAmount" },
-									React.createElement(
-										"label",
-										{ className: "control-label", htmlFor: "input-withdrawAmount" },
-										"Amount Withdraw"
-									),
-									React.createElement(
-										"div",
-										{ className: "input-group" },
-										React.createElement(
-											"span",
-											{ className: "input-group-addon" },
-											React.createElement(
-												"span",
-												null,
-												"Php"
-											)
-										),
-										React.createElement("input", {
-											type: "text",
-											id: "input-withdrawAmount",
-											className: "form-control text-right",
-											value: this.state.withdrawAmount,
-											onFocus: this.amountFocused,
-											onBlur: this.amountBlurred,
-											onChange: this.handleChange.bind(null, 'withdrawAmount') })
-									)
+									"button",
+									{ type: "submit", className: "btn btn-primary" },
+									"Update Email Address"
+								)
+							)
+						)
+					)
+				),
+				React.createElement(
+					"div",
+					{ className: "page-header" },
+					React.createElement(
+						"h2",
+						null,
+						"Edit Username"
+					)
+				),
+				React.createElement(
+					"div",
+					{ className: "row" },
+					React.createElement(
+						"div",
+						{ className: "col-md-6" },
+						React.createElement(
+							"form",
+							{ onSubmit: this.handleSubmitUsername },
+							React.createElement(
+								"div",
+								{ className: "form-group", id: "fg-username" },
+								React.createElement(
+									"label",
+									{ className: "control-label", htmlFor: "input-username" },
+									"New Username"
 								),
+								React.createElement("input", {
+									type: "text",
+									className: "form-control",
+									id: "input-username",
+									value: this.state.username,
+									placeholder: this.props.profileData.user.username === null ? 'Username not set.' : this.props.profileData.user.username === null,
+									onChange: this.handleChange.bind(null, 'username') })
+							),
+							React.createElement(
+								"div",
+								{ className: "form-group" },
 								React.createElement(
-									"div",
-									{ className: "form-group" },
-									React.createElement(
-										"label",
-										null,
-										"Notes/Reason ",
-										React.createElement(
-											"small",
-											null,
-											"(optional)"
-										)
-									),
-									React.createElement("textarea", {
-										className: "form-control",
-										rows: "5",
-										value: this.state.notes,
-										onChange: this.handleChange.bind(null, 'notes') })
+									"button",
+									{ type: "submit", className: "btn btn-primary" },
+									"Update Username"
+								)
+							)
+						)
+					)
+				),
+				React.createElement(
+					"div",
+					{ className: "page-header" },
+					React.createElement(
+						"h2",
+						null,
+						"Edit Password"
+					)
+				),
+				React.createElement(
+					"div",
+					{ className: "row" },
+					React.createElement(
+						"div",
+						{ className: "col-md-6" },
+						React.createElement(
+							"form",
+							{ onSubmit: this.handleSubmitPassword },
+							React.createElement(
+								"div",
+								{ className: "form-group", id: "fg-password" },
+								React.createElement(
+									"label",
+									{ className: "control-label", htmlFor: "input-password" },
+									"New Password"
 								),
+								React.createElement("input", {
+									type: "password",
+									className: "form-control",
+									id: "input-password",
+									value: this.state.password,
+									onChange: this.handleChange.bind(null, 'password') })
+							),
+							React.createElement(
+								"div",
+								{ className: "form-group", id: "fg-confirmPassword" },
 								React.createElement(
-									"div",
-									{ className: "form-group" },
-									React.createElement(
-										"div",
-										{ className: "pull-right" },
-										React.createElement(
-											"div",
-											{ className: "btn-group" },
-											React.createElement(
-												"button",
-												{ type: "button", className: "btn btn-default", onClick: this.props.mainViewChange.bind(null, 'DETAILS') },
-												"Cancel"
-											),
-											React.createElement(
-												"button",
-												{ type: "submit", className: "btn btn-primary" },
-												"Add Withdrawal"
-											)
-										)
-									)
+									"label",
+									{ className: "control-label", htmlFor: "input-confirmPassword" },
+									"Confirm New Password"
+								),
+								React.createElement("input", {
+									type: "password",
+									className: "form-control",
+									id: "input-confirmPassword",
+									value: this.state.confirmPassword,
+									onChange: this.handleChange.bind(null, 'confirmPassword') })
+							),
+							React.createElement(
+								"div",
+								{ className: "form-group" },
+								React.createElement(
+									"button",
+									{ type: "submit", className: "btn btn-primary" },
+									"Update Password"
 								)
 							)
 						)
@@ -1356,7 +1931,7 @@ var InvestWithdrawForm = React.createClass({
 	}
 });
 
-/*=====  End of Invest Withdraw  ======*/
+/*=====  End of Invest Profile Details  ======*/
 
 /*=============================================
 =            Invest Message Modals            =
@@ -1523,14 +2098,40 @@ var InvestMessageContainerModal = React.createClass({
 				);
 				break;
 
-			case 'DEPOSIT-SAVING':
+			case 'EMAIL-VALIDATED':
+				modalMessageComponent = React.createElement(
+					"div",
+					{ className: "panel-custom-info" },
+					React.createElement(
+						"div",
+						{ className: "panel-body" },
+						React.createElement(
+							"div",
+							{ className: "row" },
+							React.createElement(
+								"div",
+								{ className: "col-md-12" },
+								React.createElement("i", { className: "fa fa-check-circle fa-fw" }),
+								" Email already verified.",
+								React.createElement(
+									"button",
+									{ className: "close", "data-dismiss": "modal" },
+									"×"
+								)
+							)
+						)
+					)
+				);
+				break;
+
+			case 'TRANSACTION-SAVING':
 				modalMessageComponent = React.createElement(
 					"div",
 					{ className: "panel panel-default" },
 					React.createElement(
 						"div",
 						{ className: "panel-heading" },
-						"Saving Deposit"
+						"Saving Transaction"
 					),
 					React.createElement(
 						"div",
@@ -1561,7 +2162,7 @@ var InvestMessageContainerModal = React.createClass({
 				);
 				break;
 
-			case 'DEPOSIT-SUCCESS':
+			case 'TRANSACTION-SUCCESS':
 				modalMessageComponent = React.createElement(
 					"div",
 					{ className: "panel-custom-success" },
@@ -1575,7 +2176,7 @@ var InvestMessageContainerModal = React.createClass({
 								"div",
 								{ className: "col-md-12" },
 								React.createElement("i", { className: "fa fa-check-circle fa-fw" }),
-								" New Deposit Added.",
+								" New Transaction Saved.",
 								React.createElement(
 									"button",
 									{ className: "close", "data-dismiss": "modal" },
@@ -1587,7 +2188,7 @@ var InvestMessageContainerModal = React.createClass({
 				);
 				break;
 
-			case 'DEPOSIT-ERROR':
+			case 'UPDATE-TRANSACTION-ERROR':
 				modalMessageComponent = React.createElement(
 					"div",
 					{ className: "panel-custom-error" },
@@ -1601,7 +2202,7 @@ var InvestMessageContainerModal = React.createClass({
 								"div",
 								{ className: "col-md-12" },
 								React.createElement("i", { className: "fa fa-check-circle fa-fw" }),
-								" Deposit not saved. Please try again.",
+								" Transaction not Saved. Please try again.",
 								React.createElement(
 									"button",
 									{ className: "close", "data-dismiss": "modal" },
@@ -1613,14 +2214,14 @@ var InvestMessageContainerModal = React.createClass({
 				);
 				break;
 
-			case 'WITHDRAW-SAVING':
+			case 'UPDATE-TRANSACTION-SAVING':
 				modalMessageComponent = React.createElement(
 					"div",
 					{ className: "panel panel-default" },
 					React.createElement(
 						"div",
 						{ className: "panel-heading" },
-						"Saving Withdrawal"
+						"Updating Transaction"
 					),
 					React.createElement(
 						"div",
@@ -1651,7 +2252,7 @@ var InvestMessageContainerModal = React.createClass({
 				);
 				break;
 
-			case 'WITHDRAW-SUCCESS':
+			case 'UPDATE-TRANSACTION-SUCCESS':
 				modalMessageComponent = React.createElement(
 					"div",
 					{ className: "panel-custom-success" },
@@ -1665,7 +2266,7 @@ var InvestMessageContainerModal = React.createClass({
 								"div",
 								{ className: "col-md-12" },
 								React.createElement("i", { className: "fa fa-check-circle fa-fw" }),
-								" New Withdrawal Added.",
+								" Transaction Updated.",
 								React.createElement(
 									"button",
 									{ className: "close", "data-dismiss": "modal" },
@@ -1677,7 +2278,7 @@ var InvestMessageContainerModal = React.createClass({
 				);
 				break;
 
-			case 'WITHDRAW-ERROR':
+			case 'TRANSACTION-ERROR':
 				modalMessageComponent = React.createElement(
 					"div",
 					{ className: "panel-custom-error" },
@@ -1691,7 +2292,329 @@ var InvestMessageContainerModal = React.createClass({
 								"div",
 								{ className: "col-md-12" },
 								React.createElement("i", { className: "fa fa-check-circle fa-fw" }),
-								" Withdrawal not saved. Please try again.",
+								" Transaction not Updated. Please try again.",
+								React.createElement(
+									"button",
+									{ className: "close", "data-dismiss": "modal" },
+									"×"
+								)
+							)
+						)
+					)
+				);
+				break;
+
+			case 'CHANGE-EMAIL-SAVING':
+				modalMessageComponent = React.createElement(
+					"div",
+					{ className: "panel panel-default" },
+					React.createElement(
+						"div",
+						{ className: "panel-heading" },
+						"Updating Email Address"
+					),
+					React.createElement(
+						"div",
+						{ className: "panel-body" },
+						React.createElement(
+							"div",
+							{ className: "row" },
+							React.createElement(
+								"div",
+								{ className: "col-md-12" },
+								React.createElement(
+									"div",
+									{ className: "form-group" },
+									React.createElement(
+										"p",
+										{ className: "text-center" },
+										React.createElement("i", { className: "fa fa-circle-o-notch fa-2x fa-spin" })
+									),
+									React.createElement(
+										"p",
+										{ className: "text-center" },
+										"Please wait a moment."
+									)
+								)
+							)
+						)
+					)
+				);
+				break;
+
+			case 'CHANGE-EMAIL-SAVED':
+				modalMessageComponent = React.createElement(
+					"div",
+					{ className: "panel-custom-success" },
+					React.createElement(
+						"div",
+						{ className: "panel-body" },
+						React.createElement(
+							"div",
+							{ className: "row" },
+							React.createElement(
+								"div",
+								{ className: "col-md-12" },
+								React.createElement("i", { className: "fa fa-check-circle fa-fw" }),
+								" Email Address Updated.",
+								React.createElement(
+									"button",
+									{ className: "close", "data-dismiss": "modal" },
+									"×"
+								)
+							)
+						)
+					)
+				);
+				break;
+
+			case 'CHANGE-EMAIL-ERROR':
+				modalMessageComponent = React.createElement(
+					"div",
+					{ className: "panel-custom-error" },
+					React.createElement(
+						"div",
+						{ className: "panel-body" },
+						React.createElement(
+							"div",
+							{ className: "row" },
+							React.createElement(
+								"div",
+								{ className: "col-md-12" },
+								React.createElement("i", { className: "fa fa-check-circle fa-fw" }),
+								" Updating Email Failed. Please try again.",
+								React.createElement(
+									"button",
+									{ className: "close", "data-dismiss": "modal" },
+									"×"
+								)
+							)
+						)
+					)
+				);
+				break;
+
+			case 'CHANGE-EMAIL-UNCHANGED':
+				modalMessageComponent = React.createElement(
+					"div",
+					{ className: "panel-custom-info" },
+					React.createElement(
+						"div",
+						{ className: "panel-body" },
+						React.createElement(
+							"div",
+							{ className: "row" },
+							React.createElement(
+								"div",
+								{ className: "col-md-12" },
+								React.createElement("i", { className: "fa fa-check-circle fa-fw" }),
+								" Email not changed.",
+								React.createElement(
+									"button",
+									{ className: "close", "data-dismiss": "modal" },
+									"×"
+								)
+							)
+						)
+					)
+				);
+				break;
+
+			case 'CHANGE-USERNAME-SAVING':
+				modalMessageComponent = React.createElement(
+					"div",
+					{ className: "panel panel-default" },
+					React.createElement(
+						"div",
+						{ className: "panel-heading" },
+						"Updating Username"
+					),
+					React.createElement(
+						"div",
+						{ className: "panel-body" },
+						React.createElement(
+							"div",
+							{ className: "row" },
+							React.createElement(
+								"div",
+								{ className: "col-md-12" },
+								React.createElement(
+									"div",
+									{ className: "form-group" },
+									React.createElement(
+										"p",
+										{ className: "text-center" },
+										React.createElement("i", { className: "fa fa-circle-o-notch fa-2x fa-spin" })
+									),
+									React.createElement(
+										"p",
+										{ className: "text-center" },
+										"Please wait a moment."
+									)
+								)
+							)
+						)
+					)
+				);
+				break;
+
+			case 'CHANGE-USERNAME-SAVED':
+				modalMessageComponent = React.createElement(
+					"div",
+					{ className: "panel-custom-success" },
+					React.createElement(
+						"div",
+						{ className: "panel-body" },
+						React.createElement(
+							"div",
+							{ className: "row" },
+							React.createElement(
+								"div",
+								{ className: "col-md-12" },
+								React.createElement("i", { className: "fa fa-check-circle fa-fw" }),
+								" Username Updated.",
+								React.createElement(
+									"button",
+									{ className: "close", "data-dismiss": "modal" },
+									"×"
+								)
+							)
+						)
+					)
+				);
+				break;
+
+			case 'CHANGE-USERNAME-ERROR':
+				modalMessageComponent = React.createElement(
+					"div",
+					{ className: "panel-custom-error" },
+					React.createElement(
+						"div",
+						{ className: "panel-body" },
+						React.createElement(
+							"div",
+							{ className: "row" },
+							React.createElement(
+								"div",
+								{ className: "col-md-12" },
+								React.createElement("i", { className: "fa fa-check-circle fa-fw" }),
+								" Updating Username Failed. Please try again.",
+								React.createElement(
+									"button",
+									{ className: "close", "data-dismiss": "modal" },
+									"×"
+								)
+							)
+						)
+					)
+				);
+				break;
+
+			case 'CHANGE-USERNAME-UNCHANGED':
+				modalMessageComponent = React.createElement(
+					"div",
+					{ className: "panel-custom-info" },
+					React.createElement(
+						"div",
+						{ className: "panel-body" },
+						React.createElement(
+							"div",
+							{ className: "row" },
+							React.createElement(
+								"div",
+								{ className: "col-md-12" },
+								React.createElement("i", { className: "fa fa-check-circle fa-fw" }),
+								" Username not changed.",
+								React.createElement(
+									"button",
+									{ className: "close", "data-dismiss": "modal" },
+									"×"
+								)
+							)
+						)
+					)
+				);
+				break;
+
+			case 'CHANGE-PASSWORD-SAVING':
+				modalMessageComponent = React.createElement(
+					"div",
+					{ className: "panel panel-default" },
+					React.createElement(
+						"div",
+						{ className: "panel-heading" },
+						"Updating Password"
+					),
+					React.createElement(
+						"div",
+						{ className: "panel-body" },
+						React.createElement(
+							"div",
+							{ className: "row" },
+							React.createElement(
+								"div",
+								{ className: "col-md-12" },
+								React.createElement(
+									"div",
+									{ className: "form-group" },
+									React.createElement(
+										"p",
+										{ className: "text-center" },
+										React.createElement("i", { className: "fa fa-circle-o-notch fa-2x fa-spin" })
+									),
+									React.createElement(
+										"p",
+										{ className: "text-center" },
+										"Please wait a moment."
+									)
+								)
+							)
+						)
+					)
+				);
+				break;
+
+			case 'CHANGE-PASSWORD-SAVED':
+				modalMessageComponent = React.createElement(
+					"div",
+					{ className: "panel-custom-success" },
+					React.createElement(
+						"div",
+						{ className: "panel-body" },
+						React.createElement(
+							"div",
+							{ className: "row" },
+							React.createElement(
+								"div",
+								{ className: "col-md-12" },
+								React.createElement("i", { className: "fa fa-check-circle fa-fw" }),
+								" Password Updated.",
+								React.createElement(
+									"button",
+									{ className: "close", "data-dismiss": "modal" },
+									"×"
+								)
+							)
+						)
+					)
+				);
+				break;
+
+			case 'CHANGE-PASSWORD-ERROR':
+				modalMessageComponent = React.createElement(
+					"div",
+					{ className: "panel-custom-error" },
+					React.createElement(
+						"div",
+						{ className: "panel-body" },
+						React.createElement(
+							"div",
+							{ className: "row" },
+							React.createElement(
+								"div",
+								{ className: "col-md-12" },
+								React.createElement("i", { className: "fa fa-check-circle fa-fw" }),
+								" Updating Password Failed. Please try again.",
 								React.createElement(
 									"button",
 									{ className: "close", "data-dismiss": "modal" },
@@ -1782,20 +2705,6 @@ var InvestMain = React.createClass({
 
 			case 'DETAILS':
 				view = React.createElement(InvestDetailView, {
-					selectedInvestorId: this.state.selectedInvestorId,
-					modalViewChange: this.onModalViewChange,
-					mainViewChange: this.onMainViewChange });
-				break;
-
-			case 'DEPOSIT':
-				view = React.createElement(InvestDepositForm, {
-					selectedInvestorId: this.state.selectedInvestorId,
-					modalViewChange: this.onModalViewChange,
-					mainViewChange: this.onMainViewChange });
-				break;
-
-			case 'WITHDRAW':
-				view = React.createElement(InvestWithdrawForm, {
 					selectedInvestorId: this.state.selectedInvestorId,
 					modalViewChange: this.onModalViewChange,
 					mainViewChange: this.onMainViewChange });

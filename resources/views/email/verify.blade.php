@@ -5,7 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 	<meta name="format-detection" content="telephone=no" /> <!-- disable auto telephone linking in iOS -->
-	<title>Respmail is a response HTML email designed to work on all major email platforms and smartphones</title>
+	<title>Email Verification</title>
 	<style type="text/css">
 		/* RESET STYLES */
 		html { background-color:#E1E1E1; margin:0; padding:0; }
@@ -182,7 +182,6 @@
 															<tr>
 																<td align="left" valign="top" class="textContent">
 																	<img src="{{asset('images/sedpi_logo.png')}}" width="150px" />
-																	<h3 style="text-align:left;font-weight:bold;font-family:Helvetica,Arial,sans-serif;font-size:13px;margin-bottom:10px;color:#2C2C2C;line-height:135%;">Social Enterprise Development Partnerships, Inc.</h3>
 																</td>
 															</tr>
 														</table>
@@ -202,9 +201,8 @@
 											<table border="0" cellpadding="30" cellspacing="0" width="600" class="flexibleContainer">
 												<tr>
 													<td valign="top" width="600" class="flexibleContainerCell">
-														<h2 style="text-align:left;font-weight:normal;font-family:Helvetica,Arial,sans-serif;font-size:18px;margin-bottom:10px;color:#2C2C2C;line-height:135%;">Dear {{$investor->middleName === null ? sprintf("%s %s", $investor->firstName, $investor->lastName) : sprintf("%s %s %s", $investor->firstName, $investor->middleName, $investor->lastName)}},</h2>
-														<div style="text-align:left;font-family:Helvetica,Arial,sans-serif;font-size:14px;margin-bottom:30px;color:#5F5F5F;line-height:135%;">Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante.</div>
-														
+														<h2 style="text-align:left;font-weight:normal;font-family:Helvetica,Arial,sans-serif;font-size:13px;margin-bottom:10px;color:#2C2C2C;line-height:135%;">Dear {{$investor->middleName === null ? sprintf("%s %s", $investor->firstName, $investor->lastName) : sprintf("%s %s %s", $investor->firstName, $investor->middleName, $investor->lastName)}},</h2>
+														<div style="text-align:left;font-family:Helvetica,Arial,sans-serif;font-size:13px;margin-bottom:30px;color:#5F5F5F;line-height:135%;">Welcome to SEDPI Online and thank you for your interest to invest with us. To finish setting up your SEDPI account. Kindly click the button below to verify your email address.</div>
 														<table border="0" cellpadding="0" cellspacing="0" width="100%">
 															<tr style="padding-top:0;">
 																<td align="center" valign="top">
@@ -225,10 +223,16 @@
 																</td>
 															</tr>
 														</table>
-
-														<div style="text-align:left;font-family:Helvetica,Arial,sans-serif;font-size:14px;margin-bottom:30px;color:#5F5F5F;line-height:135%;">Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies SEDPI Teampor sit amet, ante.</div>
-														<div style="text-align:left;font-family:Helvetica,Arial,sans-serif;font-size:14px;margin-bottom:10px;color:#5F5F5F;line-height:135%;">Cheers,</div>
-														<h2 style="text-align:left;font-weight:normal;font-family:Helvetica,Arial,sans-serif;font-size:18px;margin-bottom:10px;color:#2C2C2C;line-height:135%;">SEDPI Team</h2>
+														<table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-top: solid gray 1px;">
+															<tr style="padding-top:0;">
+																<td align="center" valign="top">
+																	<div style="text-align:left;font-family:Helvetica,Arial,sans-serif;font-size:12px;margin-bottom:30px;color:#5F5F5F;line-height:135%;padding-top:5px;">Button not working? Paste the following link into your browser:</div>
+																	<div style="text-align:left;font-family:Helvetica,Arial,sans-serif;font-size:12px;margin-bottom:30px;color:#5F5F5F;line-height:135%;"><a href="{{ URL::route('member_verify', ['verification_code' => $user->verification_code]) }}">{{ URL::route('member_verify', ['verification_code' => $user->verification_code]) }}</a></div>
+																</td>
+															</tr>
+														</table>
+														<div style="text-align:left;font-family:Helvetica,Arial,sans-serif;font-size:13px;margin-bottom:10px;color:#5F5F5F;line-height:135%;">Cheers,</div>
+														<h2 style="text-align:left;font-weight:normal;font-family:Helvetica,Arial,sans-serif;font-size:13px;margin-bottom:10px;color:#5F5F5F;line-height:135%;">SEDPI Team</h2>
 													</td>
 												</tr>
 											</table>
@@ -252,7 +256,7 @@
 																	<table border="0" cellpadding="0" cellspacing="0" width="100%">
 																		<tr>
 																			<td valign="top" class="textContent">
-																				<div mc:edit="body" style="text-align:left;font-family:Helvetica,Arial,sans-serif;font-size:15px;margin-bottom:0;color:#5F5F5F;line-height:135%;">Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante.</div>
+																				<div mc:edit="body" style="text-align:left;font-family:Helvetica,Arial,sans-serif;font-size:12px;margin-bottom:0;color:#5F5F5F;line-height:135%;">You’re receiving this email because SEDPI Team recently created your SEDPI account. If this wasn’t you, please ignore this email.</div>
 																			</td>
 																		</tr>
 																	</table>
@@ -281,8 +285,10 @@
 																<td valign="top" bgcolor="#E1E1E1">
 
 																	<div style="font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#828282;text-align:center;line-height:120%;">
-																		<div>Copyright &#169; 2014 <a href="http://www.charlesmudy.com/respmail/" target="_blank" style="text-decoration:none;color:#828282;"><span style="color:#828282;">Respmail</span></a>. All&nbsp;rights&nbsp;reserved.</div>
-																		<div>If you do not want to recieve emails from us, you can <a href="#" target="_blank" style="text-decoration:none;color:#828282;"><span style="color:#828282;">unsubscribe</span></a>.</div>
+																		<div style="text-align:center;">Social Enterprise Development Partnerships, Inc.</div>
+																		<div style="text-align:center;">Unit 303 Loyola Heights Condominium, Esteban Abada cor. F. Dela Rosa</div>
+																		<div style="text-align:center;">Quezon City, Philippines</div>
+																		<div style="text-align:center;"><a href="www.sedpi.com" style="text-decoration:none;" target="_blank">www.sedpi.com</a></div>
 																	</div>
 
 																</td>

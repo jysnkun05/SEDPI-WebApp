@@ -17,7 +17,7 @@ class CreateInvestorsTable extends Migration
             $table->string('firstName');
             $table->string('middleName')->nullable();
             $table->string('lastName');
-            $table->string('location')->nullable();
+            $table->string('country')->nullable();
             $table->decimal('balance', 12, 2);
             $table->timestamp('member_since')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->integer('user_id');
