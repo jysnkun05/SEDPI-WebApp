@@ -12,7 +12,7 @@ class RoleTableSeeder extends Seeder
      */
     public function run()
     {
-        UserRole::create(['name' => 'Client']);
+        UserRole::create(['name' => 'Investor']);
         UserRole::create(['name' => 'Super Admin']);
     }
 }

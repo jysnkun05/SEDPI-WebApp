@@ -13,7 +13,7 @@ class CreateTransactionTypesTable extends Migration
     public function up()
     {
         Schema::connection('investor')->create('transaction_types', function (Blueprint $table) {
-            $table->increments('id');
+            $table->uuid('id');
             $table->string('code', 2)->unique();
             $table->string('description');
             $table->string('account_type', 2);

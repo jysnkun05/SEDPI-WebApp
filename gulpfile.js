@@ -72,19 +72,32 @@ gulp.task('deposit', function () {
 		.pipe(gulp.dest('./public/js/app/investors/'));
 });
 
+/*=========================================
+=            Admin Modules JSX            =
+=========================================*/
+
 gulp.task('investment', function () {
-	return gulp.src('./resources/assets/js/app/investment/invest.js')
+	return gulp.src('./resources/assets/js/app/investment/invest.jsx')
 		.pipe(babel())
 		.pipe(checkFileSize())
 		.pipe(gulp.dest('./public/js/app/investment/'));
 });
 
 gulp.task('transaction', function () {
-	return gulp.src('./resources/assets/js/app/investment/transaction.js')
+	return gulp.src('./resources/assets/js/app/investment/transaction.jsx')
 		.pipe(babel())
 		.pipe(checkFileSize())
 		.pipe(gulp.dest('./public/js/app/investment/'));
 });
+
+gulp.task('settings', function () {
+	return gulp.src('./resources/assets/js/app/investment/settings.jsx')
+		.pipe(babel())
+		.pipe(checkFileSize())
+		.pipe(gulp.dest('./public/js/app/investment'));
+});
+
+/*=====  End of Admin Modules JSX  ======*/
 
 gulp.task('verify', function () {
 	return gulp.src('./resources/assets/js/app/application/verify.js')
@@ -100,6 +113,10 @@ gulp.task('investments', function () {
 		.pipe(gulp.dest('./public/js/app/investors/'));
 });
 
+/*==================================================
+=            Minify Bundles per modules            =
+==================================================*/
+
 gulp.task('application-min', function () {
 	return  gulp.src('./public/js/app/application/*.js')
 		.pipe(concat('application.min.js'))
@@ -108,7 +125,7 @@ gulp.task('application-min', function () {
 		.pipe(gulp.dest('./public/js/app-min/'));
 });
 
-gulp.task('investment-min', function () {
+gulp.task('investment-min', ['investment', 'transaction', 'settings'], function () {
 	return gulp.src('./public/js/app/investment/*.js')
 		.pipe(concat('investment.min.js'))
 		.pipe(uglify())
@@ -116,13 +133,17 @@ gulp.task('investment-min', function () {
 		.pipe(gulp.dest('./public/js/app-min/'));
 });
 
-gulp.task('investors-min', function () {
+gulp.task('investors-min', ['investments', 'deposit'], function () {
 	return gulp.src('./public/js/app/investors/*.js')
 		.pipe(concat('investors.min.js'))
 		.pipe(uglify())
 		.pipe(checkFileSize())
 		.pipe(gulp.dest('./public/js/app-min/'));
 });
+
+/*=====  End of Minify Bundles per modules  ======*/
+
+
 
 gulp.task('app-min', ['application-min', 'investors-min', 'investment-min']);
 
@@ -131,10 +152,11 @@ gulp.task('watch', function () {
 	gulp.watch('./resources/assets/js/app/application/verify.js', ['verify']);
 	gulp.watch('./resources/assets/js/app/membership/application.js', ['application']);
 	gulp.watch('./resources/assets/js/app/membership/members.js', ['membership']);	
-	gulp.watch('./resources/assets/js/app/investors/deposit.js', ['deposit']);
-	gulp.watch('./resources/assets/js/app/investors/investments.js', ['investments']);
-	gulp.watch('./resources/assets/js/app/investment/invest.js', ['investment']);
-	gulp.watch('./resources/assets/js/app/investment/transaction.js', ['transaction']);
+	gulp.watch('./resources/assets/js/app/investors/deposit.js', ['investors-min']);
+	gulp.watch('./resources/assets/js/app/investors/investments.js', ['investors-min']);
+	gulp.watch('./resources/assets/js/app/investment/invest.jsx', ['investment-min']);
+	gulp.watch('./resources/assets/js/app/investment/transaction.jsx', ['investment-min']);
+	gulp.watch('./resources/assets/js/app/investment/settings.jsx', ['investment-min']);
 });
 
 gulp.task('default', ['watch']);

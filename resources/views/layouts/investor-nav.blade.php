@@ -17,8 +17,8 @@
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
         <li><a href="{{route('investor_investment')}}">My Investment</a></li>
-        <li class="disabled"><a>Deposit</a></li>
-        <li class="disabled"><a>Withdraw</a></li>
+        <li><a href="{{route('investor_deposit')}}" class="disabled">Deposit <small>coming soon</small></a></li>
+        <li class="disabled"><a>Withdraw <small>coming soon</small></a></li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
         <li class="dropdown">

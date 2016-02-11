@@ -13,14 +13,16 @@ class CreateInvestorsTable extends Migration
     public function up()
     {
         Schema::connection('investor')->create('investors', function (Blueprint $table) {
-            $table->increments('id');
+            $table->uuid('id');
             $table->string('firstName');
             $table->string('middleName')->nullable();
             $table->string('lastName');
-            $table->string('country')->nullable();
-            $table->decimal('balance', 12, 2);
+            $table->string('email')->nullable()->unique();
+            $table->string('verification_code', 60)->nullable();
+            $table->boolean('is_email_verified')->default(false);
+            $table->boolean('isOwner')->default(false);
+            $table->uuid('account_id');
             $table->timestamp('member_since')->default(DB::raw('CURRENT_TIMESTAMP'));
-            $table->integer('user_id');
             $table->timestamps();
         });
     }

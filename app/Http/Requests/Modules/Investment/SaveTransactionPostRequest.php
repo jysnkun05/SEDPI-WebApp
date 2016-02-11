@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Modules\Investment;
 
 use App\Http\Requests\Request;
+use Auth;
 
 class SaveTransactionPostRequest extends Request
 {

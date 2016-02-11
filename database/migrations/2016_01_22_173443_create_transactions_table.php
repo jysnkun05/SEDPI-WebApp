@@ -13,13 +13,13 @@ class CreateTransactionsTable extends Migration
     public function up()
     {
         Schema::connection('investor')->create('transactions', function (Blueprint $table) {
-            $table->increments('id');
+            $table->uuid('id');
             $table->date('transactionDate');
-            $table->integer('transaction_type_id');
             $table->decimal('amount', 12, 2);
             $table->decimal('runningBalance', 12, 2);
             $table->text('notes')->nullable();
-            $table->integer('investor_id');
+            $table->uuid('account_id');
+            $table->uuid('transaction_type_id');
             $table->timestamps();
         });
     }

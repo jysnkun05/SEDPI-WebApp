@@ -23,11 +23,57 @@ class InvestController extends Controller
     	return view('modules.investment.invest');
     }
 
+    
+    /*==============================
+    =            Getter            =
+    ==============================*/
+    
+    /*----------  Get Investor List  ----------*/
+    
     public function getInvestors()
     {
     	$investors = Investor::all(['id', 'firstName', 'middleName', 'lastName', 'country', 'balance']);
     	return $investors;
     }
+    
+    /*----------  Get Specific Investor Profile  ----------*/
+    
+
+    /*=====  End of Getter  ======*/
+    
+    
+    /*=====================================================
+    =            Account and Investor Creation            =
+    =====================================================*/
+    
+    /*----------  Save Account  ----------*/
+    
+
+    public function saveInvestor(SaveInvestorPostRequest $request)
+    {
+        $investor = Investor::create([
+            'firstName' => $request->input('firstName'),
+            'middleName' => $request->input('middleName') === '' ? null : $request->input('middleName'),
+            'lastName' => $request->input('lastName'),
+            'country' => $request->input('country') === '' ? null : $request->input('country')
+        ]);
+  
+        $user = User::create([
+            'email' => $request->input('email')
+        ]);
+
+        $investor->user_id = $user->id;
+        $investor->save();
+
+        return response()->json(['status' =>'success']);
+    }
+
+    
+    /*=====  End of Account and Investor Creation  ======*/
+    
+
+
+
 
     public function getInvestorProfile(Request $request)
     {
@@ -55,24 +101,7 @@ class InvestController extends Controller
         return $transactions;
     }
 
-    public function saveInvestor(SaveInvestorPostRequest $request)
-    {
-    	$investor = Investor::create([
-    		'firstName' => $request->input('firstName'),
-    		'middleName' => $request->input('middleName') === '' ? null : $request->input('middleName'),
-    		'lastName' => $request->input('lastName'),
-            'country' => $request->input('country') === '' ? null : $request->input('country')
-    	]);
-  
-    	$user = User::create([
-            'email' => $request->input('email')
-    	]);
-
-    	$investor->user_id = $user->id;
-    	$investor->save();
-
-    	return response()->json(['status' =>'success']);
-    }
+    
 
     public function verifyInvestor($verification_code)
     {

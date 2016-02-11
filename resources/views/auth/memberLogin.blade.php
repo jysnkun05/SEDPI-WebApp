@@ -26,7 +26,7 @@
 											<img src="{{asset('images/sedpi_logo.png')}}" width="75%">
 										</div>
 										<div class="form-group">
-											<input type="text" class="form-control" name="username" placeholder="Username" value="{{ old('email') || old('username') }}" />
+											<input type="text" class="form-control" name="username" placeholder="Username" value="{{ old('username') }}" />
 										</div>
 										<div class="form-group">
 											<input type="password" class="form-control" name="password" placeholder="Password"/>

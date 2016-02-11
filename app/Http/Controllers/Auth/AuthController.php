@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Auth;
 
 use App\User;
+use App\UserRole;
+
 use Validator;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -64,7 +66,7 @@ class AuthController extends Controller
         $credentials = $request->only('username', 'password');
 
         if (Auth::attempt(array_add($credentials, 'is_active', 1), $request->has('remember'))) {
-            if(Auth::user()->user_role_id === 1)
+            if(Auth::user()->userRole->name === 'Investor')
                 return $this->handleUserWasAuthenticated($request, $throttles);
         }
 

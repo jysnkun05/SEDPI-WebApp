@@ -42,6 +42,10 @@ hr { margin: 0.25rem auto; }
 	color: #337ab7;
 }
 
+.red-bg {
+	color: #F44336;
+}
+
 .login-form {
     margin-top: 10%;
 }
@@ -145,6 +149,16 @@ hr { margin: 0.25rem auto; }
 
 .clickable-row {
    cursor: pointer;
+}
+
+.selected-row {
+	background-color: #00BCD4 !important;
+	color: #FFFFFF;
+}
+.selected-row > button,
+.selected-row > button:hover,
+.selected-row > button:focus {
+	color: #fff;
 }
 
 .textarea-disabled-resize {

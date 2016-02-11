@@ -6,13 +6,18 @@ use App\BaseModel as Model;
 
 class Investor extends Model
 {
-    protected $connection="investor";
-    protected $table="investors";
+	use UuidForKey;
+    protected $connection='investor';
+    protected $table='investors';
+    public $incrementing = false;
+
     protected $fillable = [
-    	'firstName', 'middleName', 'lastName', 'email', 'location'
+    	'firstName', 'middleName', 'lastName', 'email'
     ];
 
-    public function user() {
-    	return $this->belongsTo('App\User')->select(['id', 'displayname', 'username', 'email', 'is_verified', 'is_active']);
+    public function account() {
+    	return $this->belongsTo('App\Account');
     }
+   	
+    
 }

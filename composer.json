@@ -8,7 +8,10 @@
         "php": ">=5.5.9",
         "laravel/framework": "5.2.*",
         "propaganistas/laravel-phone": "~2.0",
-        "monarobase/country-list": "dev-master"
+        "monarobase/country-list": "dev-master",
+        "genealabs/laravel-caffeine":"~0.3.0",
+        "ramsey/uuid": "^3.1",
+        "moontoast/math": "^1.1"
     },
     "require-dev": {
         "fzaninotto/faker": "~1.4",

@@ -13,7 +13,7 @@ class CreateApplicantsTable extends Migration
     public function up()
     {
         Schema::connection('application')->create('applicants', function (Blueprint $table) {
-            $table->increments('id');
+            $table->uuid('id');
 
             $table->string('firstName');
             $table->string('middleName')->nullable();

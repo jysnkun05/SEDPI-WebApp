@@ -6,13 +6,14 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class User extends Authenticatable
 {
+    use UuidForKey;
     /**
      * The attributes that are mass assignable.
      *
      * @var array
      */
     protected $fillable = [
-        'displayname', 'username', 'email',
+        'username'
     ];
 
     /**
@@ -23,12 +24,13 @@ class User extends Authenticatable
     protected $hidden = [
         'password', 'remember_token',
     ];
+    public $incrementing = false;
 
     public function userRole() {
         return $this->belongsTo('App\UserRole');
     }
 
-    public function investor() {
-        return $this->hasOne('App\Investor');
+    public function account() {
+        return $this->hasOne('App\Account');
     }
 }

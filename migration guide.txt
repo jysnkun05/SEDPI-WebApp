@@ -1,0 +1,54 @@
+1. Migrate DB Schema.
+2: Edit .env file.
+
+	//Core DB Connection
+	CDB_HOST=localhost
+	CDB_DATABASE=vinerap_sedpi_core
+	CDB_USERNAME=vinerap_newadmin
+	CDB_PASSWORD=sedpi2004
+
+	//Investor DB Connection
+	IDB_HOST=localhost
+	IDB_DATABASE=vinerap_sedpi_investor
+	IDB_USERNAME=vinerap_newadmin
+	IDB_PASSWORD=sedpi2004
+
+	//Mail Driver
+	MAIL_DRIVER=smtp
+	MAIL_HOST=websrv.sedpi.com
+	MAIL_PORT=587
+	MAIL_USERNAME=no-reply@sedpi.com
+	MAIL_PASSWORD=sedpi2004
+	MAIL_ENCRYPTION=tls
+
+2. Copy all the content on the public directory to Public_html/sedpi directory.
+3. Go to public directory and edit index.php.
+
+	FROM:
+		require __DIR__.'/../../bootstrap/autoload.php';
+	TO:
+		require __DIR__.'/../../<app folder>/bootstrap/autoload.php';
+
+	FROM:
+		$app = require_once __DIR__.'/../bootstrap/app.php';
+	TO:
+		$app = require_once __DIR__.'/../../<app folder>/bootstrap/app.php';
+
+4. Edit Route.php.
+	Change all the domain.
+	FROM .dev TO .com.
+
+5. Edit Modules\Investment\InvestController@sendEmailVerification.
+	FROM:
+		$message->from('jynsdlsrys05@gmail.com', 'Jayson De los Reyes');
+	TO:
+		$message->from('no-reply@sedpi.com', 'SEDPI');
+
+6. Edit Views. Change all script to all minified versions.
+7. Test the App.
+8. Update DB Schema to new one again.
+
+
+	
+
+

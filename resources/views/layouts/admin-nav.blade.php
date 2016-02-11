@@ -16,9 +16,7 @@
     <!-- Collect the nav links, forms, and other content for toggling -->
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
-        <li class="disabled"><a>Membership</a></li>
         <li><a href="{{route('admin_investor')}}">Investors</a></li>
-        <li class="disabled"><a href="{{route('admin_transaction')}}">Transactions</a></li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
         <li class="dropdown">
