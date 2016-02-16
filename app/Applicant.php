@@ -6,7 +6,6 @@ use App\BaseModel as Model;
 
 class Applicant extends Model
 {
-    protected $connection = 'application';
     protected $table = 'applicants';
     protected $dates = [ 'birthDate', 'investmentDate', 'b1BirthDate', 'b2BirthDate', 'created_at', 'updated_at'];
     protected $fillable = [

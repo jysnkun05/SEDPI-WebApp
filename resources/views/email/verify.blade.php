@@ -213,7 +213,7 @@
 																				<table border="0" cellpadding="0" cellspacing="0" width="70%" class="emailButton" style="background-color: #3498DB;">
 																					<tr>
 																						<td align="center" valign="middle" class="buttonContent" style="padding-top:15px;padding-bottom:15px;padding-right:15px;padding-left:15px;">
-																							<a style="color:#FFFFFF;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:20px;line-height:135%;" href="{{ URL::route('member_verify', ['verification_code' => $user->verification_code]) }}" target="_blank">Verify your email address</a>
+																							<a style="color:#FFFFFF;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:20px;line-height:135%;" href="{{ URL::route('member_verify', ['verification_code' => $investor->verification_code]) }}" target="_blank">Verify your email address</a>
 																						</td>
 																					</tr>
 																				</table>
@@ -227,7 +227,7 @@
 															<tr style="padding-top:0;">
 																<td align="center" valign="top">
 																	<div style="text-align:left;font-family:Helvetica,Arial,sans-serif;font-size:12px;margin-bottom:30px;color:#5F5F5F;line-height:135%;padding-top:5px;">Button not working? Paste the following link into your browser:</div>
-																	<div style="text-align:left;font-family:Helvetica,Arial,sans-serif;font-size:12px;margin-bottom:30px;color:#5F5F5F;line-height:135%;"><a href="{{ URL::route('member_verify', ['verification_code' => $user->verification_code]) }}">{{ URL::route('member_verify', ['verification_code' => $user->verification_code]) }}</a></div>
+																	<div style="text-align:left;font-family:Helvetica,Arial,sans-serif;font-size:12px;margin-bottom:30px;color:#5F5F5F;line-height:135%;"><a href="{{ URL::route('member_verify', ['verification_code' => $investor->verification_code]) }}">{{ URL::route('member_verify', ['verification_code' => $investor->verification_code]) }}</a></div>
 																</td>
 															</tr>
 														</table>

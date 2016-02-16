@@ -13,11 +13,14 @@ class UserTableSeeder extends Seeder
     public function run()
     {
         $user = User::create([ 
-        	'username' => 'superuser',
+        	'displayname' => 'Super User',
+            'username' => 'superuser',
         	'email' => 'admin@sedpi.com',
         	'password' => bcrypt('sedpi2004'),
             'user_role_id' => App\UserRole::where('name', 'Super Admin')->first()->id,
-        	'is_active' => true
+            'is_active' => true,
+            'is_editable' => false,
+            'is_deletable' => false,
         ]);
     }
 }

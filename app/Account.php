@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 class Account extends Model
 {
 	use UuidForKey;
-   	protected $connection = 'investor';
    	protected $table = 'accounts';
    	public $incrementing = false;
 

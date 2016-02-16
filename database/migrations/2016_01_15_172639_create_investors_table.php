@@ -12,7 +12,7 @@ class CreateInvestorsTable extends Migration
      */
     public function up()
     {
-        Schema::connection('investor')->create('investors', function (Blueprint $table) {
+        Schema::create('investors', function (Blueprint $table) {
             $table->uuid('id');
             $table->string('firstName');
             $table->string('middleName')->nullable();
@@ -34,6 +34,6 @@ class CreateInvestorsTable extends Migration
      */
     public function down()
     {
-        Schema::connection('investor')->drop('investors');
+        Schema::drop('investors');
     }
 }

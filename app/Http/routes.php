@@ -42,7 +42,7 @@ Route::group(['middleware' => ['web']], function () {
     		});
     		Route::get('logout', 'Auth\AuthController@getLogout');
     		Route::get('investors',  ['uses' => 'Modules\Admin\Investor\InvestController@index', 'as' => 'admin_investor']);
-    		// Route::get('settings', ['uses' => 'Modules\Admin\Settings\UserSettingsController@index', 'as' => 'admin_settings']);
+    		Route::get('settings', ['uses' => 'Modules\Admin\Settings\UserSettingsController@index', 'as' => 'admin_settings']);
     		//Route::get('application', ['uses' => 'Modules\Membership\ApplicationController@index', 'as' => 'application']);
     		//Route::get('membership', ['uses' => 'Modules\Membership\MemberController@index', 'as' => 'membership']);
     		//Route::get('transactions', ['uses' => 'Modules\Investment\TransactionController@index', 'as' => 'admin_transaction']);
@@ -82,9 +82,20 @@ Route::group(['middleware' => ['web']], function () {
 			// Route::post('updateTransaction', 'Modules\Investment\TransactionController@updateTransaction');
 		});
 
-        // Route::group(['prefix' => 'api/settings/users'], function () {
-        //     Route::post('getAllUserRoles', 'Modules\Admin\Settings\UserSettingsController@getAllUserRoles');
-        // });
+        Route::group(['prefix' => 'api/email'], function () {
+            Route::post('sendEmailVerification', 'Modules\Admin\Investor\EmailController@sendEmailVerification');
+        });
+
+        Route::group(['prefix' => 'api/settings/users'], function () {
+            Route::post('getAllAdminUsers', 'Modules\Admin\Settings\UserSettingsController@getAllAdminUsers');
+            Route::post('getAllUserRoles', 'Modules\Admin\Settings\UserSettingsController@getAllUserRoles');
+            Route::post('getAdminRoleOptions', 'Modules\Admin\Settings\UserSettingsController@getAdminRoleOptions');
+            Route::post('saveAdminUser', 'Modules\Admin\Settings\UserSettingsController@saveAdminUser');
+        });
+
+        Route::group(['prefix' => 'api/settings/emails'], function () {
+            Route::post("getEmailAccounts", 'Modules\Admin\Settings\EmailSettingsController@getEmailAccounts');
+        });
     });
 
 
@@ -106,7 +117,7 @@ Route::group(['middleware' => ['web']], function () {
 	    	});
     	});
 
-    	Route::get('verify/{verification_code}', ['uses' => 'Modules\Investment\InvestController@verifyInvestor', 'as' => 'member_verify']);
+    	Route::get('verify/{verification_code}', ['uses' => 'Modules\Admin\Investor\EmailController@verifyInvestor', 'as' => 'member_verify']);
 
     	Route::group(['prefix' => 'api/verify'], function () {
     		Route::post('setUserCredentials', 'Modules\Investment\InvestController@setUserCredentials');

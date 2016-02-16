@@ -26,7 +26,7 @@ return [
     |
     */
 
-    'default' => env('CDB_CONNECTION', 'core'),
+    'default' => env('CDB_CONNECTION', 'mysql'),
 
     /*
     |--------------------------------------------------------------------------
@@ -84,45 +84,6 @@ return [
             'charset'  => 'utf8',
             'prefix'   => '',
         ],
-
-        'core' => [
-            'driver'    => 'mysql',
-            'host'      => env('CDB_HOST', 'localhost'),
-            'database'  => env('CDB_DATABASE', 'forge'),
-            'username'  => env('CDB_USERNAME', 'forge'),
-            'password'  => env('CDB_PASSWORD', ''),
-            'charset'   => 'utf8',
-            'collation' => 'utf8_unicode_ci',
-            'prefix'    => '',
-            'strict'    => false,
-        ],
-
-        'application' => [
-            'driver'    => 'mysql',
-            'host'      => env('ADB_HOST', 'localhost'),
-            'database'  => env('ADB_DATABASE', 'forge'),
-            'username'  => env('ADB_USERNAME', 'forge'),
-            'password'  => env('ADB_PASSWORD', ''),
-            'charset'   => 'utf8',
-            'collation' => 'utf8_unicode_ci',
-            'prefix'    => '',
-            'strict'    => false,
-        ],
-
-        'investor' => [
-            'driver'    => 'mysql',
-            'host'      => env('IDB_HOST', 'localhost'),
-            'database'  => env('IDB_DATABASE', 'forge'),
-            'username'  => env('IDB_USERNAME', 'forge'),
-            'password'  => env('IDB_PASSWORD', ''),
-            'charset'   => 'utf8',
-            'collation' => 'utf8_unicode_ci',
-            'prefix'    => '',
-            'strict'    => false,
-        ],
-
-        
-
     ],
 
     /*

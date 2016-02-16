@@ -6,7 +6,6 @@ use App\BaseModel as Model;
 
 class ApplicationStatus extends Model
 {
-    protected $connection = 'application';
     protected $table = 'application_statuses';
     protected $guarded = ['*'];
     public $timestamps = false;

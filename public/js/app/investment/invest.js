@@ -209,7 +209,8 @@ var CreateInvestorAccount = React.createClass({
 			coInvestors: this.state.coInvestors,
 			firstName: this.state.firstName.trim(),
 			middleName: this.state.middleName.trim(),
-			lastName: this.state.lastName.trim()
+			lastName: this.state.lastName.trim(),
+			email: this.state.email.trim()
 		};
 
 		this.setState({
@@ -859,11 +860,14 @@ var AccountDetails = React.createClass({
 				)
 			);
 		} else {
+			var verifyEmail;
+			var ownerInvestor;
 			account = this.props.account;
 			user = this.props.account.user;
 			investors = this.props.account.investors;
 			investorList = investors.map(function (investor, index) {
 				var fullName = investor.middleName ? null === investor.firstName + " " + investor.middleName + " " + investor.lastName : investor.firstName + " " + investor.lastName;
+				if (investor.isOwner) ownerInvestor = investor;
 				return React.createElement(
 					"p",
 					{ key: index },
@@ -873,54 +877,65 @@ var AccountDetails = React.createClass({
 				);
 			});
 			detailView = React.createElement(
-				"table",
-				{ className: "table table-condensed table-striped table-hover" },
+				"div",
+				{ className: "form-group" },
+				verifyEmail,
 				React.createElement(
-					"tbody",
-					null,
-					React.createElement(AccountNameComponent, {
-						account: account,
-						getAllAccounts: this.props.getAllAccounts,
-						getAccountDetails: this.props.getAccountDetails }),
-					React.createElement(AccountTypeComponent, {
-						account: account,
-						getAllAccounts: this.props.getAllAccounts,
-						getAccountDetails: this.props.getAccountDetails }),
-					React.createElement(UsernameComponent, {
-						account: account,
-						user: user,
-						getAllAccounts: this.props.getAllAccounts,
-						getAccountDetails: this.props.getAccountDetails }),
-					React.createElement(PasswordComponent, {
-						account: account,
-						user: user,
-						getAllAccounts: this.props.getAllAccounts,
-						getAccountDetails: this.props.getAccountDetails }),
-					React.createElement(UserActiveComponent, {
-						account: account,
-						user: user,
-						getAllAccounts: this.props.getAllAccounts,
-						getAccountDetails: this.props.getAccountDetails }),
+					"table",
+					{ className: "table table-condensed table-striped table-hover" },
 					React.createElement(
-						"tr",
+						"tbody",
 						null,
+						React.createElement(AccountNameComponent, {
+							account: account,
+							getAllAccounts: this.props.getAllAccounts,
+							getAccountDetails: this.props.getAccountDetails }),
+						React.createElement(AccountTypeComponent, {
+							account: account,
+							getAllAccounts: this.props.getAllAccounts,
+							getAccountDetails: this.props.getAccountDetails }),
+						React.createElement(UsernameComponent, {
+							account: account,
+							user: user,
+							getAllAccounts: this.props.getAllAccounts,
+							getAccountDetails: this.props.getAccountDetails }),
+						React.createElement(PasswordComponent, {
+							account: account,
+							user: user,
+							getAllAccounts: this.props.getAllAccounts,
+							getAccountDetails: this.props.getAccountDetails }),
+						React.createElement(UserActiveComponent, {
+							account: account,
+							user: user,
+							getAllAccounts: this.props.getAllAccounts,
+							getAccountDetails: this.props.getAccountDetails }),
+						React.createElement(UserEmailComponent, {
+							account: account,
+							user: user,
+							ownerInvestor: ownerInvestor,
+							getAllAccounts: this.props.getAllAccounts,
+							getAccountDetails: this.props.getAccountDetails }),
 						React.createElement(
-							"td",
-							{ className: "table-title-col" },
-							"Investor(s)"
-						),
-						React.createElement(
-							"td",
+							"tr",
 							null,
-							investorList
-						),
-						React.createElement(
-							"td",
-							{ className: "text-right" },
 							React.createElement(
-								"button",
-								{ className: "btn btn-link btn-xs" },
-								"Edit"
+								"td",
+								{ className: "table-title-col" },
+								"Investor(s)"
+							),
+							React.createElement(
+								"td",
+								null,
+								investorList
+							),
+							React.createElement(
+								"td",
+								{ className: "text-right" },
+								React.createElement(
+									"button",
+									{ className: "btn btn-link btn-xs" },
+									"Edit"
+								)
 							)
 						)
 					)
@@ -2104,7 +2119,7 @@ var UserActiveComponent = React.createClass({
 	},
 	render: function () {
 		var componentContent;
-
+		var componentButton;
 		componentContent = this.state.isActive ? React.createElement(
 			"td",
 			{ className: "green-bg" },
@@ -2181,6 +2196,120 @@ var UserActiveComponent = React.createClass({
 				"Status"
 			),
 			componentContent,
+			componentButton
+		);
+	}
+});
+
+/*----------  User Email Component ----------*/
+
+var UserEmailComponent = React.createClass({
+	displayName: "UserEmailComponent",
+
+	getInitialState: function () {
+		return {
+			status: undefined
+		};
+	},
+	_sendEmailVerification: function () {
+		this.setState({ status: 'SENDING' });
+		$.ajax({
+			url: '/api/email/sendEmailVerification',
+			type: 'POST',
+			data: { id: this.props.ownerInvestor.id },
+			dataType: 'json',
+			success: function (response) {
+				var self = this;
+				this.props.getAccountDetails(0, this.props.account.id);
+				this.props.getAllAccounts(0);
+				this.setState({ status: 'SENT' });
+				setTimeout(function () {
+					self.setState({ status: undefined });
+				}, 3000);
+			}.bind(this),
+			error: function (xhr, status, error) {
+				var self = this;
+				this.setState({ status: "ERROR" });
+				setTimeout(function () {
+					self.setState({ status: undefined });
+				}, 3000);
+			}.bind(this)
+		});
+	},
+	render: function () {
+		var user = this.props.user;
+		var ownerInvestor = this.props.ownerInvestor;
+		var componentButton;
+
+		if (!ownerInvestor.is_email_verified) {
+			switch (this.state.status) {
+				case 'SENDING':
+					componentButton = React.createElement(
+						"td",
+						{ className: "text-right" },
+						React.createElement("i", { className: "fa fa-circle-o-notch fa-spin fa-fw" }),
+						" ",
+						React.createElement(
+							"small",
+							null,
+							"Sending..."
+						)
+					);
+					break;
+				case 'SENT':
+					componentButton = React.createElement(
+						"td",
+						{ className: "text-right" },
+						React.createElement("i", { className: "fa fa-check-circle fa-fw green-bg" }),
+						" ",
+						React.createElement(
+							"small",
+							null,
+							"Email Sent"
+						)
+					);
+					break;
+				case 'ERROR':
+					componentButton = React.createElement(
+						"td",
+						{ className: "text-right" },
+						React.createElement("i", { className: "fa fa-exclamation-triangle fa-fw red-bg" }),
+						" ",
+						React.createElement(
+							"small",
+							null,
+							"Error"
+						)
+					);
+					break;
+				default:
+					componentButton = React.createElement(
+						"td",
+						{ className: "text-right" },
+						React.createElement(
+							"button",
+							{ className: "btn btn-link btn-xs", onClick: this._sendEmailVerification },
+							ownerInvestor.verification_code === null ? "Send" : "Resend"
+						)
+					);
+					break;
+			}
+		}
+		return React.createElement(
+			"tr",
+			null,
+			React.createElement(
+				"td",
+				{ className: "table-title-col" },
+				"Email"
+			),
+			React.createElement(
+				"td",
+				null,
+				user.email === null ? ownerInvestor.email : user.email,
+				" ",
+				user.email === null ? React.createElement("i", { className: "fa fa-exclamation-triangle fa-fw orange-bg" }) : null
+			),
 			componentButton
 		);
 	}

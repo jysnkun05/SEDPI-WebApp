@@ -12,7 +12,7 @@ class CreateTransactionsTable extends Migration
      */
     public function up()
     {
-        Schema::connection('investor')->create('transactions', function (Blueprint $table) {
+        Schema::create('transactions', function (Blueprint $table) {
             $table->uuid('id');
             $table->date('transactionDate');
             $table->decimal('amount', 12, 2);
@@ -31,6 +31,6 @@ class CreateTransactionsTable extends Migration
      */
     public function down()
     {
-        Schema::connection('investor')->drop('transactions');
+        Schema::drop('transactions');
     }
 }

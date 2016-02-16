@@ -12,7 +12,7 @@ class CreateApplicantTypesTable extends Migration
      */
     public function up()
     {
-        Schema::connection('application')->create('applicant_types', function (Blueprint $table) {
+        Schema::create('applicant_types', function (Blueprint $table) {
             $table->increments('id');
             $table->string('name');
         });
@@ -25,6 +25,6 @@ class CreateApplicantTypesTable extends Migration
      */
     public function down()
     {
-        Schema::connection('application')->drop('applicant_types');
+        Schema::drop('applicant_types');
     }
 }

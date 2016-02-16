@@ -12,7 +12,7 @@ class CreateApplicationStatusesTable extends Migration
      */
     public function up()
     {
-        Schema::connection('application')->create('application_statuses', function (Blueprint $table) {
+        Schema::create('application_statuses', function (Blueprint $table) {
             $table->increments('id');
             $table->string('name');
             $table->boolean('isSelectable');
@@ -26,6 +26,6 @@ class CreateApplicationStatusesTable extends Migration
      */
     public function down()
     {
-        Schema::connection('application')->drop('application_statuses');
+        Schema::drop('application_statuses');
     }
 }

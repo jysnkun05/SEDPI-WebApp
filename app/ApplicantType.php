@@ -6,7 +6,6 @@ use App\BaseModel as Model;
 
 class ApplicantType extends Model
 {
-    protected $connection = 'application';
     protected $table = 'applicant_types';
     protected $guarded = ['*'];
     public $timestamps = false;

@@ -120,7 +120,8 @@ var CreateInvestorAccount = React.createClass({
 			coInvestors: this.state.coInvestors,
 			firstName: this.state.firstName.trim(),
 			middleName: this.state.middleName.trim(),
-			lastName: this.state.lastName.trim()
+			lastName: this.state.lastName.trim(),
+			email: this.state.email.trim()
 		};
 
 		this.setState({
@@ -551,48 +552,60 @@ var AccountDetails = React.createClass({
 		}
 		else 
 		{
+			var verifyEmail;
+			var ownerInvestor;
 			account = this.props.account;
 			user = this.props.account.user;
 			investors = this.props.account.investors;
 			investorList = investors.map( function (investor, index) {
 				var fullName = investor.middleName ? null === investor.firstName + " " + investor.middleName + " " + investor.lastName : investor.firstName + " " + investor.lastName;
+				if(investor.isOwner)
+					ownerInvestor = investor;
 				return <p key={index}>{fullName} {investor.isOwner ? <i className="fa fa-user fa-fw blue-bg"></i> : null }</p>;
 			});
-			detailView = 	<table className="table table-condensed table-striped table-hover">
-								<tbody>
-									<AccountNameComponent 
-										account={account} 
-										getAllAccounts={this.props.getAllAccounts}
-										getAccountDetails={this.props.getAccountDetails}/>
-									<AccountTypeComponent 
-										account={account} 
-										getAllAccounts={this.props.getAllAccounts}
-										getAccountDetails={this.props.getAccountDetails}/>
-									<UsernameComponent 
-										account={account}
-										user={user} 
-										getAllAccounts={this.props.getAllAccounts}
-										getAccountDetails={this.props.getAccountDetails}/>
-									<PasswordComponent 
-										account={account}
-										user={user} 
-										getAllAccounts={this.props.getAllAccounts}
-										getAccountDetails={this.props.getAccountDetails}/>
-									<UserActiveComponent 
-										account={account}
-										user={user} 
-										getAllAccounts={this.props.getAllAccounts}
-										getAccountDetails={this.props.getAccountDetails}/>
-									
-									<tr>
-										<td className="table-title-col">Investor(s)</td>
-										<td>
-											{investorList}
-										</td>
-										<td className="text-right"><button className="btn btn-link btn-xs">Edit</button></td>
-									</tr>
-								</tbody>
-							</table>;
+			detailView = 	<div className="form-group">
+								{verifyEmail}
+								<table className="table table-condensed table-striped table-hover">
+									<tbody>
+										<AccountNameComponent 
+											account={account} 
+											getAllAccounts={this.props.getAllAccounts}
+											getAccountDetails={this.props.getAccountDetails}/>
+										<AccountTypeComponent 
+											account={account} 
+											getAllAccounts={this.props.getAllAccounts}
+											getAccountDetails={this.props.getAccountDetails}/>
+										<UsernameComponent 
+											account={account}
+											user={user} 
+											getAllAccounts={this.props.getAllAccounts}
+											getAccountDetails={this.props.getAccountDetails}/>
+										<PasswordComponent 
+											account={account}
+											user={user} 
+											getAllAccounts={this.props.getAllAccounts}
+											getAccountDetails={this.props.getAccountDetails}/>
+										<UserActiveComponent 
+											account={account}
+											user={user} 
+											getAllAccounts={this.props.getAllAccounts}
+											getAccountDetails={this.props.getAccountDetails}/>
+										<UserEmailComponent 
+											account={account}
+											user={user}
+											ownerInvestor={ownerInvestor}
+											getAllAccounts={this.props.getAllAccounts}
+											getAccountDetails={this.props.getAccountDetails}/>
+										<tr>
+											<td className="table-title-col">Investor(s)</td>
+											<td>
+												{investorList}
+											</td>
+											<td className="text-right"><button className="btn btn-link btn-xs">Edit</button></td>
+										</tr>
+									</tbody>
+								</table>
+							</div>;
 		} 
 		return (
 			<div className="panel panel-default">
@@ -1313,7 +1326,7 @@ var UserActiveComponent = React.createClass({
 	},
 	render: function () {
 		var componentContent;
-		
+		var componentButton;
 		componentContent = this.state.isActive ? <td className="green-bg">Active</td> : <td className="red-bg">Inactive</td>;
 		switch(this.state.status) {
 			case 'updating':
@@ -1340,6 +1353,78 @@ var UserActiveComponent = React.createClass({
 	}
 });
 
+/*----------  User Email Component ----------*/
+
+var UserEmailComponent = React.createClass({
+	getInitialState: function () {
+		return {
+			status: undefined
+		};
+	},
+	_sendEmailVerification: function () {
+		this.setState({status: 'SENDING'});
+		$.ajax({
+			url: '/api/email/sendEmailVerification',
+			type: 'POST',
+			data: {id: this.props.ownerInvestor.id},
+			dataType: 'json',
+			success: function (response) {
+				var self = this;
+				this.props.getAccountDetails(0, this.props.account.id);
+				this.props.getAllAccounts(0);
+				this.setState({status: 'SENT'});
+				setTimeout(function () {
+					self.setState({status: undefined});
+				}, 3000);
+			}.bind(this),
+			error: function (xhr, status, error) {
+				var self = this;
+				this.setState({status: "ERROR"});
+				setTimeout(function () {
+					self.setState({status: undefined});
+				}, 3000);
+			}.bind(this)
+		});
+	},
+	render: function () {
+		var user=this.props.user;
+		var ownerInvestor = this.props.ownerInvestor;
+		var componentButton;
+
+		if(!ownerInvestor.is_email_verified)
+		{
+			switch(this.state.status) {
+				case 'SENDING':
+					componentButton = 	<td className="text-right">
+											<i className="fa fa-circle-o-notch fa-spin fa-fw"></i> <small>Sending...</small>
+										</td>;
+					break;
+				case 'SENT':
+					componentButton = 	<td className="text-right">
+											<i className="fa fa-check-circle fa-fw green-bg"></i> <small>Email Sent</small>
+										</td>;
+					break;
+				case 'ERROR':
+				componentButton = 	<td className="text-right">
+										<i className="fa fa-exclamation-triangle fa-fw red-bg"></i> <small>Error</small>
+									</td>;
+				break;
+				default: 
+					componentButton = 	<td className="text-right">
+											<button className="btn btn-link btn-xs" onClick={this._sendEmailVerification}>{ownerInvestor.verification_code === null ? "Send" : "Resend"}</button>
+										</td>;
+					break;
+			}
+		}
+		return (
+			<tr>
+				<td className="table-title-col">Email</td>
+				<td>{user.email === null ? ownerInvestor.email : user.email} {user.email === null ? <i className="fa fa-exclamation-triangle fa-fw orange-bg"></i> : null}</td>
+				{componentButton}
+			</tr>
+		);
+	}
+});
 
 /*=====  End of Account Details Components  ======*/
 

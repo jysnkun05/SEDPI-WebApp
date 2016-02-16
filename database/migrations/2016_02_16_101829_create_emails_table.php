@@ -3,7 +3,7 @@
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateAccountsTable extends Migration
+class CreateEmailsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -12,12 +12,15 @@ class CreateAccountsTable extends Migration
      */
     public function up()
     {
-        Schema::create('accounts', function (Blueprint $table) {
+        Schema::create('emails', function (Blueprint $table) {
             $table->uuid('id');
+            $table->string('description')->nullable();
+            $table->string('driver');
+            $table->string('port');
             $table->string('name');
-            $table->string('type');
-            $table->decimal('balance', 15, 2)->default(0.00);
-            $table->uuid('user_id')->default('');
+            $table->string('username');
+            $table->string('password');
+            $table->string('encryption_type');
             $table->timestamps();
         });
     }
@@ -29,6 +32,6 @@ class CreateAccountsTable extends Migration
      */
     public function down()
     {
-        Schema::drop('accounts');
+        Schema::drop('emails');
     }
 }

@@ -12,7 +12,7 @@ class CreateTransactionTypesTable extends Migration
      */
     public function up()
     {
-        Schema::connection('investor')->create('transaction_types', function (Blueprint $table) {
+        Schema::create('transaction_types', function (Blueprint $table) {
             $table->uuid('id');
             $table->string('code', 2)->unique();
             $table->string('description');
@@ -28,6 +28,6 @@ class CreateTransactionTypesTable extends Migration
      */
     public function down()
     {
-        Schema::connection('investor')->drop('transaction_types');
+        Schema::drop('transaction_types');
     }
 }

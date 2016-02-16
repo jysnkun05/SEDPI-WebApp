@@ -12,7 +12,7 @@ class CreateApplicantsTable extends Migration
      */
     public function up()
     {
-        Schema::connection('application')->create('applicants', function (Blueprint $table) {
+        Schema::create('applicants', function (Blueprint $table) {
             $table->uuid('id');
 
             $table->string('firstName');
@@ -73,6 +73,6 @@ class CreateApplicantsTable extends Migration
      */
     public function down()
     {
-        Schema::connection('application')->drop('applicants');
+        Schema::drop('applicants');
     }
 }
