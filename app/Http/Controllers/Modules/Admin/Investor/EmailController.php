@@ -40,7 +40,7 @@ class EmailController extends Controller
         }
 
         Mail::send('email.verify', ['investor' => $investor] ,function($message) use ($investor) {
-            $message->from('no-reply@sedpi.com', 'SEDPI Team');
+            $message->from('sedpisocialinvestments@gmail.com', 'SEDPI Team');
             $message->to($investor->email, $investor->middleName === null ? 
                 sprintf("%s %s", $investor->firstName, $investor->lastName) : sprintf("%s %s %s", $investor->firstName, $investor->middleName ,$investor->lastName))
                 ->subject('[SEDPI] Verify your email address'); 
